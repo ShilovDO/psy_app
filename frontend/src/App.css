@@ -1,0 +1,15 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --recaptcha-div-width: 200px;
+    --recaptcha-div-height: 224px;
+}
+div:has(iframe[src*="recaptcha/api2/bframe"]) {
+    z-index: 2000000001;
+    border: 1px solid green; /* Пример стиля */
+    width: var(--recaptcha-div-width) !important;
+    height: var(--recaptcha-div-height) !important;
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .preview {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            cursor: grab;
+            position: relative;
+        }
+        .image-box {
+            position: relative;
+            margin: 10px;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Управление изображениями</h2>
+    <input type="file" id="uploadInput" multiple accept="image/*" class="form-control mb-3">
+    <div id="imageList" class="d-flex flex-wrap"></div>
+    <button id="saveOrderBtn" class="btn btn-success mt-3">💾 Сохранить порядок</button>
+</div>
+
+<script>
+    const imageList = document.getElementById('imageList');
+    const uploadInput = document.getElementById('uploadInput');
+    const saveOrderBtn = document.getElementById('saveOrderBtn');
+
+    let images = [];
+
+    async function fetchImages() {
+        const res = await fetch('/api/images');
+        images = await res.json();
+        renderImages();
+    }
+
+    function renderImages() {
+        imageList.innerHTML = '';
+        images.forEach(name => {
+            const div = document.createElement('div');
+            div.className = 'image-box';
+            div.draggable = true;
+            div.dataset.name = name;
+
+            const img = document.createElement('img');
+            img.src = `/images/${name}?t=${Date.now()}`;
+            img.className = 'preview';
+
+            const btn = document.createElement('button');
+            btn.className = 'remove-btn';
+            btn.innerText = '×';
+            btn.onclick = async () => {
+                await fetch(`/api/delete/${name}`, { method: 'DELETE' });
+                fetchImages();
+            };
+
+            div.appendChild(img);
+            div.appendChild(btn);
+            imageList.appendChild(div);
+        });
+        enableDragDrop();
+    }
+
+    uploadInput.addEventListener('change', async () => {
+        const formData = new FormData();
+        for (const file of uploadInput.files) {
+            formData.append('images', file);
+        }
+        await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        uploadInput.value = '';
+        fetchImages();
+    });
+
+    saveOrderBtn.addEventListener('click', async () => {
+        const ordered = [...imageList.children].map(div => div.dataset.name);
+        await fetch('/api/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ordered)
+        });
+        fetchImages();
+    });
+
+    function enableDragDrop() {
+        let dragging;
+
+        imageList.querySelectorAll('.image-box').forEach(item => {
+            item.addEventListener('dragstart', () => dragging = item);
+            item.addEventListener('dragover', e => e.preventDefault());
+            item.addEventListener('drop', e => {
+                if (dragging && dragging !== item) {
+                    imageList.insertBefore(dragging, item);
+                }
+            });
+        });
+    }
+
+    fetchImages();
+</script>
+</body>
+</html>

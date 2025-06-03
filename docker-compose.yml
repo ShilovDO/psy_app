@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    # Убираем depends_on, так как БД внешняя
+    environment:
+      - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/psycho
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - express
+
+  express:
+    build: ./service_carusel
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./service_carusel/public/images:/app/public/images

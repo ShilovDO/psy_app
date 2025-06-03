@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+div:has(iframe[src*="recaptcha/api2/bframe"]) {
+    z-index: 2000000001;
+    width: var(--recaptcha-div-width) !important;
+    height: var(--recaptcha-div-height) !important;
+}
