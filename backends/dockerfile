@@ -1,0 +1,14 @@
+# backend/Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Изменяем DATABASE_URL для работы внутри Docker-сети
+ENV DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@db:5432/psycho
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
