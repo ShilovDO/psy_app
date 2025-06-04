@@ -1,18 +1,15 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
-    # Убираем depends_on, так как БД внешняя
+      - "8001:8001"  # Изменяем внешний порт на 8001
     environment:
       - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/psycho
 
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "80:80"  # Изменяем внешний порт фронтенда на 8080
     depends_on:
       - backend
       - express
@@ -20,6 +17,6 @@ services:
   express:
     build: ./service_carusel
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Изменяем внешний порт на 3001
     volumes:
       - ./service_carusel/public/images:/app/public/images

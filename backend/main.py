@@ -109,12 +109,14 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 # Разрешаем запросы с указанных доменов (в вашем случае — фронтенд на `localhost:5177`)
-origins = [
+origins=[
     "http://localhost",
     "http://frontend",
-    "http://express",
-    "http://backend"
-]
+    "http://frontend:80",
+    "http://localhost:80",
+    "http://127.0.0.1",
+    "http://127.0.0.1:80"
+],
 
 app.middleware("http")(auth_middleware)
 
@@ -126,6 +128,13 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
     expose_headers=["*"]
 )
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Forwarded-Proto"] = "http"  # Или "https" в production
+    response.headers["Access-Control-Expose-Headers"] = "Authorization, Set-Cookie"
+    return response
 
 @app.get("/")
 async def root():
