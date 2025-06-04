@@ -111,6 +111,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 # Разрешаем запросы с указанных доменов (в вашем случае — фронтенд на `localhost:5177`)
 origins = [
     "http://192.168.0.233",
+    "http://176.108.249.27",
     "http://localhost",
     "http://frontend"
 ]
@@ -206,7 +207,7 @@ async def login_for_access_token(userLogin: UserLogin, response: Response):
 	httponly=True,
 	secure=False,  # Для HTTP! В production поменять на True
 	samesite="lax",
-	domain="192.168.0.233",  # Явно указываем домен
+	domain="176.108.249.27",  # Явно указываем домен
 	path="/"
     )
     db.close()
@@ -259,12 +260,13 @@ async def refreshTokens(response: Response, request: Request):
         refresh_token = create_refresh_token(data_refersh, remember)
         print(refresh_token)
         response.set_cookie(
-            key="refresh_token",  # Название куки
-            value=refresh_token,  # Значение (сам токен)
-            httponly=True,       # Токен доступен только серверу (защита от XSS)
-            max_age=30 * 24 * 60 * 60,  # Срок жизни (например, 30 дней в секундах)
-            secure=True,         # Передавать только по HTTPS (в продакшене)
-            samesite="lax"       # Защита от CSRF-атак
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Для HTTP! В production поменять на True
+        samesite="lax",
+        domain="176.108.249.27",  # Явно указываем домен
+        path="/"
         )
         return {"access_token": access_token, "token_type": "bearer"}
     except:
