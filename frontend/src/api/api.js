@@ -14,6 +14,10 @@ const BASE_URL = '/api';
 const apiClient = axios.create({
     baseURL: BASE_URL,
     withCredentials: true, // Если нужно для всех запросов
+    headers: {
+	'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
 });
 
 // Интерсептор запросов

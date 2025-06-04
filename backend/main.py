@@ -109,14 +109,12 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 # Разрешаем запросы с указанных доменов (в вашем случае — фронтенд на `localhost:5177`)
-origins=[
+origins = [
+    "http://192.168.0.233",
     "http://localhost",
-    "http://frontend",
-    "http://frontend:80",
-    "http://localhost:80",
-    "http://127.0.0.1",
-    "http://127.0.0.1:80"
-],
+    "http://frontend"
+]
+
 
 app.middleware("http")(auth_middleware)
 
@@ -124,9 +122,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
-    expose_headers=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Set-Cookie", "Authorization"]
 )
 
 @app.middleware("http")
@@ -203,12 +201,13 @@ async def login_for_access_token(userLogin: UserLogin, response: Response):
     refresh_token = create_refresh_token(data_refersh, userLogin.remember)
     print(refresh_token)
     response.set_cookie(
-        key="refresh_token",  # Название куки
-        value=refresh_token,  # Значение (сам токен)
-        httponly=True,       # Токен доступен только серверу (защита от XSS)
-        max_age=30 * 24 * 60 * 60,  # Срок жизни (например, 30 дней в секундах)
-        secure=True,         # Передавать только по HTTPS (в продакшене)
-        samesite="lax"       # Защита от CSRF-атак
+	key="refresh_token",
+	value=refresh_token,
+	httponly=True,
+	secure=False,  # Для HTTP! В production поменять на True
+	samesite="lax",
+	domain="192.168.0.233",  # Явно указываем домен
+	path="/"
     )
     db.close()
     return {"access_token": access_token, "token_type": "bearer"}
