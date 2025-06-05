@@ -2,7 +2,7 @@ import React from 'react';
 
 const Spiner = () => {
     return (
-        <div className="row min-vh-100 align-items-center justify-content-center">
+        <div className="min-h-full align-items-center justify-content-center">
             <div className="col text-center">
                 <div role="status">
                     <svg aria-hidden="true"
@@ -16,7 +16,7 @@ const Spiner = () => {
                             fill="currentFill"/>
                     </svg>
                 </div>
-                <span className="visually-hidden text-xl text-gray-900 dark:text-gray-200">Loading...</span>
+                <span className="visually-hidden text-xl text-gray-900 dark:text-gray-200">загрузка...</span>
             </div>
         </div>
     );

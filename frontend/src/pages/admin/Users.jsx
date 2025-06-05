@@ -1,24 +1,32 @@
 import Avatar from "../../Components/Avatar.jsx";
-import {useEffect, useState} from "react";
-import {api} from "../../api/api.js";
-import {toast} from "react-toastify";
+import { useEffect, useState } from "react";
+import { api } from "../../api/api.js";
+import { toast } from "react-toastify";
 import Spiner from "../../Components/Spiner.jsx";
 import TextInput from "../../Components/TextInput.jsx";
-import {Helmet} from "react-helmet";
-import {useForm} from "react-hook-form";
+import { Helmet } from "react-helmet";
+import { useForm } from "react-hook-form";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
-import {useSearchParams} from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 export default function Users() {
-    const SORT_OPTIONS = [
-        {value: "name_desc", label: "По убыванию имени пользователя"},
-        {value: "name_asc", label: "По возрастанию имени пользователя"},
-        {value: "email_desc", label: "По убыванию email"},
-        {value: "email_asc", label: "По возрастанию email"},
-        {value: "id_desc", label: "Сначала новые"},
-        {value: "id_asc", label: "Сначала старые"},
+    const PER_PAGE_OPTIONS = [
+        { value: 5, label: "5 записей" },
+        { value: 10, label: "10 записей" },
+        { value: 20, label: "20 записей" },
+        { value: 50, label: "50 записей" }
     ];
+
+    const SORT_OPTIONS = [
+        { value: "name_desc", label: "По убыванию имени пользователя" },
+        { value: "name_asc", label: "По возрастанию имени пользователя" },
+        { value: "email_desc", label: "По убыванию email" },
+        { value: "email_asc", label: "По возрастанию email" },
+        { value: "id_desc", label: "Сначала новые" },
+        { value: "id_asc", label: "Сначала старые" },
+    ];
+
     const [usersData, setUsersData] = useState({
         items: [],
         total: 0,
@@ -26,22 +34,23 @@ export default function Users() {
         per_page: 10,
         total_pages: 1
     });
+
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [mailFree, setMailFree] = useState(true);
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [sortParam, setSortParam] = useState(localStorage.getItem('user_sort') || 'name_asc');
 
+    const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = parseInt(searchParams.get("page")) || 1;
+
+    const [sortParam, setSortParam] = useState(localStorage.getItem('user_sort') || 'name_asc');
+    const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_user') || 10));
 
     const {
         register,
         handleSubmit,
-        watch,
-        formState: {errors, isValid},
-        resetField,
+        formState: { errors },
         reset,
         setValue
     } = useForm({
@@ -50,43 +59,40 @@ export default function Users() {
             username: '',
             mail: '',
             password: '',
-            password_confirmation: '',
             admin: false
         },
     });
 
-    const fetchUsers = async (page = 1, per_page = 10, sort = "id_asc") => {
+    const fetchUsers = async (page, per_page, sort) => {
         try {
             setLoading(true);
             const [field, direction] = sort.split("_");
             const response = await api.getUsers(page, per_page, field, direction);
-
             if (response?.data) {
                 setUsersData(response.data);
             } else {
-                setUsersData(prev => ({...prev, items: []}));
-                toast.error('Не удалось получить список пользователей');
+                setUsersData(prev => ({ ...prev, items: [] }));
+                toast.error("Не удалось получить список пользователей");
             }
         } catch (error) {
-            toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
-            console.error('Ошибка при загрузке пользователей:', error);
+            toast.error((error?.message || "Ошибка при получении данных") + ` Код ошибки: ${error?.status}`);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleMail = async (e) => {
-        try {
-            var mail = e.target.value;
-            setValue("mail", mail ?? mail, {shouldValidate: true});
-            if (mail === "") return;
-            console.log(mail);
-            const response = await api.checkMail(mail);
-            setMailFree(response.data);
-        } catch (error) {
-            toast.error(error.message || 'Все плохо');
-        }
-    }
+    const handlePerPageChange = (e) => {
+        const newPerPage = parseInt(e.target.value);
+        setPerPage(newPerPage);
+        localStorage.setItem('users_per_page_user', newPerPage.toString());
+        setSearchParams({ page: 1 });
+    };
+
+    const handleSortChange = (e) => {
+        setSortParam(e.target.value);
+        localStorage.setItem('user_sort', e.target.value);
+        setSearchParams({ page: 1 });
+    };
 
     const handleCreateClick = () => {
         setIsCreating(true);
@@ -110,64 +116,63 @@ export default function Users() {
     };
 
     const handleDelete = async (userId) => {
-        if (window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+        if (window.confirm("Удалить пользователя?")) {
             try {
                 await api.deleteUser(userId);
-                toast.success('Пользователь удален');
-                fetchUsers(currentPage, usersData.per_page, sortParam);
+                toast.success("Пользователь удален");
+                fetchUsers(currentPage, perPage, sortParam);
             } catch (error) {
-                toast.error(error.response?.data?.detail || 'Ошибка при удалении пользователя');
+                toast.error(error.response?.data?.detail || "Ошибка при удалении");
             }
         }
     };
-
-
-    const handlePageChange = (newPage) => {
-        setSearchParams({page: newPage});
-    };
-
-    const handleSortChange = (e) => {
-        setSortParam(e.target.value);
-        localStorage.setItem('user_sort', e.target.value);
-        setSearchParams({page: 1});
-    };
-
-    useEffect(() => {
-        fetchUsers(currentPage, usersData.per_page, sortParam);
-    }, [currentPage, sortParam]);
 
     const onSubmit = async (data) => {
         try {
             if (isCreating && mailFree) {
-                await api.postRegister({
-                    username: data.username,
-                    mail: data.mail,
-                    password: data.password,
-                    admin: data.admin
-                });
-                toast.success('Пользователь успешно зарегистрирован');
+                await api.postRegister(data);
+                toast.success("Пользователь создан");
             } else {
-                await api.updateUser({
-                    id: currentUserId,
-                    username: data.username,
-                    mail: data.mail,
-                    password: data.password,
-                    admin: data.admin
-                });
-                toast.success('Пользователь успешно обновлен');
+                await api.updateUser({ ...data, id: currentUserId });
+                toast.success("Пользователь обновлен");
             }
-
-            fetchUsers(currentPage, usersData.per_page, sortParam);
             setIsModalOpen(false);
+            fetchUsers(currentPage, perPage, sortParam);
         } catch (error) {
-            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'регистрации' : 'обновлении'} пользователя`);
+            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'}`);
         }
     };
 
+    const handleMail = async (e) => {
+        const mail = e.target.value;
+        setValue("mail", mail, { shouldValidate: true });
+        if (!mail) return;
+        try {
+            const res = await api.checkMail(mail);
+            setMailFree(res.data);
+        } catch (error) {
+            toast.error("Ошибка проверки почты");
+        }
+    };
+
+    const handlePageChange = (page) => {
+        setSearchParams({ page });
+    };
+
     useEffect(() => {
-        setTimeout(() => {
-            fetchUsers(currentPage, usersData.per_page, sortParam);
-        }, 100);
+        fetchUsers(currentPage, perPage, sortParam);
+    }, [currentPage, sortParam]);
+
+    useEffect(() => {
+        fetchUsers(currentPage, perPage, sortParam);
+    }, [perPage]);
+
+    useEffect(() => {
+        const handleEsc = (event) => {
+            if (event.key === "Escape") setIsModalOpen(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
     }, []);
 
     return (
@@ -186,17 +191,30 @@ export default function Users() {
                                     Всего: {usersData.total} пользователей
                                 </span>
                                 <br/>
-                                <select
-                                    value={sortParam}
-                                    onChange={handleSortChange}
-                                    className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                >
-                                    {SORT_OPTIONS.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                    <select
+                                        value={sortParam}
+                                        onChange={handleSortChange}
+                                        className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {SORT_OPTIONS.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={perPage}
+                                        onChange={handlePerPageChange}
+                                        className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {PER_PAGE_OPTIONS.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex items-center gap-4 me-3">
 

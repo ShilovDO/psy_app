@@ -47,11 +47,12 @@ const Trigger = ({ children }) => {
 };
 
 const Content = ({
-                     align = 'right',
-                     width = '48',
-                     contentClasses = 'py-1 bg-white dark:bg-gray-700',
-                     children,
-                 }) => {
+    align = 'right',
+    width = '48',
+    contentClasses = 'py-1 bg-white dark:bg-gray-700',
+    side = 'bottom',
+    children,
+}) => {
     const { open, setOpen } = useContext(DropDownContext);
 
     let alignmentClasses = 'origin-top';
@@ -68,6 +69,17 @@ const Content = ({
         widthClasses = 'w-48';
     }
 
+    let sideClasses = 'mt-2';
+    if (side === 'top') {
+        sideClasses = 'bottom-full mb-2';
+    } else if (side === 'right') {
+        sideClasses = 'left-full ml-2';
+    } else if (side === 'left') {
+        sideClasses = 'right-full mr-2';
+    } else if (side === 'bottom') {
+        sideClasses = 'mt-2';
+    }
+
     return (
         <>
             <Transition
@@ -80,7 +92,7 @@ const Content = ({
                 leaveTo="opacity-0 scale-95"
             >
                 <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
+                    className={`absolute z-50 rounded-md shadow-lg ${alignmentClasses} ${widthClasses} ${sideClasses}`}
                 >
                     <div
                         className={
@@ -97,17 +109,29 @@ const Content = ({
     );
 };
 
-const DropdownLink = ({ className = '', children, ...props }) => {
+const DropdownLink = ({ className = '', linkMode = false, children, ...props }) => {
     return (
-        <Link
-            {...props}
-            className={
-                'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:bg-gray-800 ' +
-                className
-            }
-        >
-            {children}
-        </Link>
+        linkMode ? (
+            <Link
+                {...props}
+                className={
+                    'block cursor-pointer w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:bg-gray-800 ' +
+                    className
+                }
+            >
+                {children}
+            </Link>
+        ) : (
+            <div
+                {...props}
+                className={
+                    'block cursor-pointer w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-800 dark:focus:bg-gray-800 ' +
+                    className
+                }
+            >
+                {children}
+            </div>
+        )
     );
 };
 

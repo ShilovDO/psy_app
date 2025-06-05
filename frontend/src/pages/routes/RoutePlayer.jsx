@@ -263,34 +263,37 @@ export default function RoutePlayer() {
                             Выйти
                         </button>
 
-                        {/* Отображение станций в виде кружков */}
-                        <div className="flex-1 flex items-center justify-center space-x-4">
-                            {stations.map((station, index) => (
-                                <div key={index} className="flex flex-col items-center">
-                                    <motion.div
-                                        className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all ${
-                                            index < currentStationIndex 
-                                                ? "bg-green-500 text-white" 
-                                                : index === currentStationIndex 
-                                                    ? station.available === false 
-                                                        ? "bg-yellow-500 text-white ring-4 ring-yellow-300" 
-                                                        : "bg-blue-600 text-white ring-4 ring-blue-300" 
-                                                    : "bg-gray-200 dark:bg-gray-600"
-                                        }`}
-                                    >
-                                        {station.number}
-                                        {station.available === false && index === currentStationIndex && (
-                                            <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                                !
-                                            </span>
-                                        )}
-                                    </motion.div>
-                                    <span className="text-xs mt-1 text-gray-500 dark:text-gray-400 truncate max-w-20">
-                                        {station.service_name}
-                                    </span>
-                                </div>
-                            ))}
+                        {/* Отображение станций в виде кружков с переносом на новую строку */}
+                        <div className="flex-1 overflow-x-auto py-2">
+                            <div className="flex flex-wrap items-center justify-center gap-4 min-w-max">
+                                {stations.map((station, index) => (
+                                    <div key={index} className="flex flex-col items-center">
+                                        <motion.div
+                                            className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all ${
+                                                index < currentStationIndex 
+                                                    ? "bg-green-500 text-white" 
+                                                    : index === currentStationIndex 
+                                                        ? station.available === false 
+                                                            ? "bg-yellow-500 text-white ring-4 ring-yellow-300" 
+                                                            : "bg-blue-600 text-white ring-4 ring-blue-300" 
+                                                        : "bg-gray-200 dark:bg-gray-600"
+                                            }`}
+                                        >
+                                            {station.number}
+                                            {station.available === false && index === currentStationIndex && (
+                                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                                    !
+                                                </span>
+                                            )}
+                                        </motion.div>
+                                        <span className="text-xs mt-1 text-gray-500 dark:text-gray-400 truncate max-w-20">
+                                            {station.service_name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+
                         {!currentStation.entry && currentStation.available ? (
                             <motion.button 
                                 whileHover={{ scale: 1.03 }}
@@ -302,12 +305,7 @@ export default function RoutePlayer() {
                             </motion.button>
                         ) : 
                         (
-                            <motion.button 
-                                disabled="true"
-                                className="px-6 py-2 rounded-lg font-medium text-white shadow-md bg-gray-600 hover:bg-gray-700 transition-all"
-                            >
-                                Пройти станцию
-                            </motion.button>
+                            ""
                         )}
 
                         {currentStationIndex === stations.length - 1 && currentStation.entry && (

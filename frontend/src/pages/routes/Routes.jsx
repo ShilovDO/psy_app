@@ -7,6 +7,13 @@ import {useNavigate, useSearchParams} from "react-router-dom";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 
+const PER_PAGE_OPTIONS = [
+    { value: 5, label: "5 записей" },
+    { value: 10, label: "10 записей" },
+    { value: 20, label: "20 записей" },
+    { value: 50, label: "50 записей" }
+];
+
 const SORT_OPTIONS = [
   {value: "name_desc", label: "По убыванию названия"},
   {value: "name_asc", label: "По возрастанию названия"},
@@ -28,10 +35,11 @@ export default function AppRoutes() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortParam, setSortParam] = useState(localStorage.getItem('routes_sort') || 'name_asc');
   const navigate = useNavigate();
+  const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_route') || 10));
 
   const currentPage = parseInt(searchParams.get("page")) || 1;
 
-  const fetchRoutes = async (page = 1, per_page = 10, sort = "id_asc") => {
+  const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc") => {
     try {
       setLoading(true);
       const [field, direction] = sort.split("_");
@@ -51,6 +59,13 @@ export default function AppRoutes() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePerPageChange = (e) => {
+    const newPerPage = parseInt(e.target.value);
+    setPerPage(newPerPage);
+    localStorage.setItem('users_per_page_user', newPerPage.toString());
+    setSearchParams({ page: 1 });
   };
 
   const fetchStationsForRoute = async (routeId) => {
@@ -113,12 +128,16 @@ export default function AppRoutes() {
     setSortParam(e.target.value);
     localStorage.setItem('routes_sort', e.target.value);
     setSearchParams({page: 1});
+    currentPage = parseInt(searchParams.get("page")) || 1;
   };
 
   useEffect(() => {
-    fetchRoutes(currentPage, routesData.per_page, sortParam);
+    fetchRoutes(searchParams.get("page"), perPage, sortParam);
   }, [currentPage, sortParam]);
-
+  
+  useEffect(() => {
+    fetchRoutes(undefined, perPage, sortParam);
+  }, [perPage]);
   return (
       <div className="py-12">
         <Helmet>
@@ -128,25 +147,58 @@ export default function AppRoutes() {
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
           <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg dark:border-gray-700 dark:bg-gray-800">
             <div className="p-6 text-gray-900">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-6 flex-wrap">
+                <div>
                 <h1 className="text-2xl font-bold dark:text-gray-200">
                   Список маршрутов
                 </h1>
-                <div className="flex items-center gap-4">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Всего: {routesData.total} маршрутов
-                                </span>
-                  <select
-                      value={sortParam}
-                      onChange={handleSortChange}
-                      className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Всего: {routesData.total} маршрутов
+                  </span>
+                  </div>
+                <div className="flex items-center gap-4 flex-wrap">
+
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <select
+                          value={sortParam}
+                          onChange={handleSortChange}
+                          className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        {SORT_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                        ))}
+                      </select>
+                      <select
+                        value={perPage}
+                        onChange={handlePerPageChange}
+                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        {PER_PAGE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                      </select>
+                  </div>
+                  <button
+                    onClick={() => {navigate("create-route")}}
+                    className="flex р-11 items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-2"
                   >
-                    {SORT_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                    ))}
-                  </select>
+                    <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5 flex-shrink-0" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
+                        Добавить маршрут
+                    </span>
+                  </button>
                 </div>
               </div>
 
@@ -159,11 +211,11 @@ export default function AppRoutes() {
                             className="border border-gray-200 rounded-lg dark:border-gray-700"
                         >
                           <div
-                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-t-lg">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
+                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-t-lg flex-wrap">
+                            <h3 className="text-lg break-normal font-medium text-gray-900 dark:text-gray-200">
                               {route.name}
                             </h3>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {/* Dropdown с действиями */}
                               <Dropdown>
                                 <Dropdown.Trigger>
@@ -184,11 +236,12 @@ export default function AppRoutes() {
                                   </button>
                                 </Dropdown.Trigger>
 
-                                <Dropdown.Content>
+                                <Dropdown.Content side="right">
                                   <Dropdown.Link
                                       as="button"
                                       //onClick={() => handleChange(route.id)}
-                                      to={`../create-route/${route.id}`}
+                                      to={`create-route/${route.id}`}
+                                      linkMode={true}
                                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
                                   >
                                     <svg

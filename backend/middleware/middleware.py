@@ -28,7 +28,7 @@ async def auth_middleware(request: Request, call_next):
         if not authorization:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authorization header missing",
+                detail="Нет заголовка авторизации",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -36,7 +36,7 @@ async def auth_middleware(request: Request, call_next):
         if not token or scheme.lower() != "bearer":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication scheme",
+                detail="Не удалось получить токен из заголовка",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -48,12 +48,12 @@ async def auth_middleware(request: Request, call_next):
         # Проверка прав администратора
         admin_endpoints = [
             "/add_service", "/change_service", "/delete_service",
-            "/all_users", "/change_user", "/delete_user"
+            "/all_users", "/change_user", "/delete_user", "/all_service"
         ]
         if request.url.path in admin_endpoints and not user.admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin privileges required",
+                detail="У вас нет прав администратора",
             )
 
         request.state.user = user

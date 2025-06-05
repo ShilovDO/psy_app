@@ -61,7 +61,7 @@ export default function Login() {
                 setLoading(false);
                 //toast.success(response?.status + ' login');
                 reset();
-                navigate('/task-one');
+                navigate('/');
             }
             else{
                 throw new Error('Ответ сервера некорректен');
@@ -79,7 +79,6 @@ export default function Login() {
 
     return (
 <>
-<GuestLayout>
     <Helmet>
         <title>Log in</title>
     </Helmet>
@@ -156,7 +155,6 @@ export default function Login() {
                 </div>
             </form>
     }
-</GuestLayout>
 </>
     );
 }

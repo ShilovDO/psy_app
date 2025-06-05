@@ -66,238 +66,290 @@ export default function AuthenticatedLayout({header}) {
 
 
     if (userGetting && !user) {
-        // Перенаправляем на /login, сохраняя текущий URL для возврата после входа
         return <Navigate to="/login" state={{ from: location.pathname }} replace />;
       }
 
     return userGetting ? (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-            <nav className="border-b border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800">
-                <div className="mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                <Link to="/">
-                                    <ApplicationLogo
-                                        className="block h-9 w-auto fill-current text-gray-800 dark:text-gray-200"/>
-                                </Link>
-                            </div>
-
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                            {user?.admin && ( 
-                                <NavLink
-                                to='/admin/users'
-                                active={(location.pathname).startsWith("/admin")}
-                            >
-                                Админ-панель
-                            </NavLink>
-                                )}
-                            
-                            <NavLink
-                                to='/routes'
-                                active={location.pathname === '/routes'}
-                                className="block"
-                            >
-                                Маршруты
-                            </NavLink>
-                            <NavLink
-                                to='/create-route'
-                                active={location.pathname === '/create-route'}
-                            >
-                                Создать маршрут
-                            </NavLink>
-                            <NavLink
-                            to='/services'
-                            active={location.pathname === '/services'}
-                            className="w-full pb-1"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
-                            </svg>
-                            Список сервисов
-                        </NavLink>
-                            </div>
-
-                        </div>
-
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                {user?.email && (
-                                    <>
-                                        <Dropdown>
-                                            <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                            >
-                                                <Avatar email={user?.email} size="md" className="me-2"/>
-                                                {user?.username}
-
-                                                <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                            </Dropdown.Trigger>
-
-                                            <Dropdown.Content>
-                                                <Dropdown.Link
-                                                    //   href={route('profile.edit')}
-                                                    to='/profile'
-                                                    as="button"
-                                                >
-                                                    Профиль
-                                                </Dropdown.Link>
-                                                <Dropdown.Link
-                                                    // href={route('logout')}
-                                                    onClick={logout}
-                                                    as="button"
-                                                >
-                                                    Выход
-                                                </Dropdown.Link>
-                                            </Dropdown.Content>
-                                        </Dropdown>
-                                    </>
-                                )}
-                            </div>
-                            <ThemeSwitcher></ThemeSwitcher>
-                        </div>
-
-                        <div className="-me-2 flex items-center sm:hidden">
-                            <ThemeSwitcher></ThemeSwitcher>
-                            <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown(
-                                        (previousState) => !previousState,
-                                    )
-                                }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none dark:text-gray-500 dark:hover:bg-gray-900 dark:hover:text-gray-400 dark:focus:bg-gray-900 dark:focus:text-gray-400"
-                            >
-                                <svg
-                                    className="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        className={
-                                            !showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={
-                                            showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+            <nav className="border-b border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 sticky top-0 z-50">
+    <div className="mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 justify-between">
+            <div className="flex">
+                <div className="flex shrink-0 items-center">
+                    <Link to="/">
+                        <ApplicationLogo
+                            className="block h-9 w-auto fill-current text-gray-800 dark:text-gray-200"/>
+                    </Link>
                 </div>
 
-                <div
-                    className={
-                        (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
+                <div className="hidden space-x-2 sm:-my-px sm:ms-10 md:flex">
+                    {user?.admin && ( 
+                        <NavLink
+                            to='/admin/users'
+                            active={(location.pathname).startsWith("/admin")}
+                            className="inline-flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                            </svg>
+                            Админ-панель
+                        </NavLink>
+                    )}
+                    
+                    <NavLink
+                        to='/routes'
+                        active={(location.pathname).startsWith('/routes')}
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+                        </svg>
+                        Маршруты
+                    </NavLink>
+                    
+                    <NavLink
+                        to='/services'
+                        active={location.pathname === '/services'}
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+                        </svg>
+                        Сервисы
+                    </NavLink>
+                </div>
+            </div>
+
+            <div className="hidden sm:ms-6 md:flex sm:items-center">
+                <ThemeSwitcher className="mr-4"/>
+                <div className="relative ms-3">
+                    {user?.email && (
+                        <>
+                            <Dropdown>
+                                <Dropdown.Trigger>
+                                    <span className="inline-flex rounded-md">
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                        >
+                                            <Avatar email={user?.email} size="md" className="me-2"/>
+                                            {user?.username}
+                                            <svg
+                                                className="-me-0.5 ms-2 h-4 w-4"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                    clipRule="evenodd"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                </Dropdown.Trigger>
+
+                                <Dropdown.Content>
+                                    <Dropdown.Link
+                                        to='/profile'
+                                        as="button"
+                                        linkMode={true}
+                                        className="flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                        </svg>
+                                        Профиль
+                                    </Dropdown.Link>
+                                    <Dropdown.Link
+                                        onClick={logout}
+                                        as="button"
+                                        className="flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                                        </svg>
+                                        Выход
+                                    </Dropdown.Link>
+                                </Dropdown.Content>
+                            </Dropdown>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div className="-me-2 flex items-center md:hidden">
+                <ThemeSwitcher className="mr-2"/>
+                <button
+                    onClick={() =>
+                        setShowingNavigationDropdown(
+                            (previousState) => !previousState,
+                        )
                     }
+                    className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none dark:text-gray-500 dark:hover:bg-gray-900 dark:hover:text-gray-400 dark:focus:bg-gray-900 dark:focus:text-gray-400"
                 >
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            to="/task-one"
-                            active={location.pathname === '/task-one'}
-                            onClick={() => setShowingNavigationDropdown(false)}
-                        >
-                            Task one
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            to="/task-two"
-                            active={location.pathname === '/task-two'}
-                            onClick={() => setShowingNavigationDropdown(false)}
-                        >
-                            Task two
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            // href={route('taskThree')}
-                            to='/task-three'
-                            active={location.pathname === '/task-three'}
-                            onClick={() => setShowingNavigationDropdown(false)}
-                        >
-                            Task three
-                        </ResponsiveNavLink>
-                    </div>
+                    <svg
+                        className="h-6 w-6"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            className={
+                                !showingNavigationDropdown
+                                    ? 'inline-flex'
+                                    : 'hidden'
+                            }
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M4 6h16M4 12h16M4 18h16"
+                        />
+                        <path
+                            className={
+                                showingNavigationDropdown
+                                    ? 'inline-flex'
+                                    : 'hidden'
+                            }
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
-                    <div className="border-t border-gray-200 pb-1 pt-4 dark:border-gray-600">
-                        {user ? (
-                                <>
-                                    <div>
-                                        <div className="flex">
-                                            <Avatar email={user?.email} size="md" className="ms-3 mt-1"/>
-                                            <div className="px-4">
+    <div
+        className={
+            (showingNavigationDropdown ? 'block' : 'hidden') +
+            ' m:hidden'
+        }
+    >
+        <div className="space-y-1 pb-3 pt-2">
+            {user?.admin && ( 
+                <ResponsiveNavLink
+                    to='/admin/users'
+                    active={(location.pathname).startsWith("/admin")}
+                    onClick={() => setShowingNavigationDropdown(false)}
+                    className="flex items-center"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                    Админ-панель
+                </ResponsiveNavLink>
+            )}
+            
+            <ResponsiveNavLink
+                to='/routes'
+                active={location.pathname === '/routes'}
+                onClick={() => setShowingNavigationDropdown(false)}
+                className="flex items-center"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+                </svg>
+                Маршруты
+            </ResponsiveNavLink>
+            
+            <ResponsiveNavLink
+                to='/create-route'
+                active={location.pathname === '/create-route'}
+                onClick={() => setShowingNavigationDropdown(false)}
+                className="flex items-center"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Создать маршрут
+            </ResponsiveNavLink>
+            
+            <ResponsiveNavLink
+                to='/services'
+                active={location.pathname === '/services'}
+                onClick={() => setShowingNavigationDropdown(false)}
+                className="flex items-center"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+                </svg>
+                Сервисы
+            </ResponsiveNavLink>
+        </div>
 
-                                                <div className="text-base font-medium text-gray-800 dark:text-gray-200">
-                                                    {user?.username}
-                                                </div>
-                                                <div className="text-sm font-medium text-gray-500">
-                                                    {user?.email}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-3 space-y-1">
-                                            <ResponsiveNavLink to='/profile'
-                                                               active={location.pathname === '/profile'}
-                                                               onClick={() => setShowingNavigationDropdown(false)}
-                                            >
-                                                Профиль
-                                            </ResponsiveNavLink>
-                                            <ResponsiveNavLink
-                                                as="button"
-                                                onClick={logout}
-                                            >
-                                                Выход
-                                            </ResponsiveNavLink>
-                                        </div>
+        <div className="border-t border-gray-200 pb-1 pt-4 dark:border-gray-600">
+            {user ? (
+                    <>
+                        <div>
+                            <div className="flex">
+                                <Avatar email={user?.email} size="md" className="ms-3 mt-1"/>
+                                <div className="px-4">
+                                    <div className="text-base font-medium text-gray-800 dark:text-gray-200">
+                                        {user?.username}
                                     </div>
-                                </>
-                            )
-                            : (<div className="mt-3 space-y-1">
-                                <ResponsiveNavLink to='/login' active={location.pathname === '/login'}
-                                                   onClick={() => setShowingNavigationDropdown(false)}
+                                    <div className="text-sm font-medium text-gray-500">
+                                        {user?.email}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 space-y-1">
+                                <ResponsiveNavLink 
+                                    to='/profile'
+                                    active={location.pathname === '/profile'}
+                                    onClick={() => setShowingNavigationDropdown(false)}
+                                    className="flex items-center"
                                 >
-                                    Log in
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                    </svg>
+                                    Профиль
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink
-                                    to='/register' active={location.pathname === '/register'}
-                                    onClick={() => setShowingNavigationDropdown(false)}
+                                    as="button"
+                                    onClick={logout}
+                                    className="flex items-center w-full"
                                 >
-                                    Sign up
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                                    </svg>
+                                    Выход
                                 </ResponsiveNavLink>
-                            </div>)}
-                    </div>
-                </div>
-            </nav>
+                            </div>
+                        </div>
+                    </>
+                )
+                : (<div className="mt-3 space-y-1">
+                    <ResponsiveNavLink 
+                        to='/login' 
+                        active={location.pathname === '/login'}
+                        onClick={() => setShowingNavigationDropdown(false)}
+                        className="flex items-center"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Вход
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        to='/register' 
+                        active={location.pathname === '/register'}
+                        onClick={() => setShowingNavigationDropdown(false)}
+                        className="flex items-center"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
+                        </svg>
+                        Регистрация
+                    </ResponsiveNavLink>
+                </div>)}
+        </div>
+    </div>
+</nav>
 
             {header && (
                 <header className="bg-white shadow dark:bg-gray-800">

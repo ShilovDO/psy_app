@@ -10,7 +10,11 @@ export default function GeneralLayout() {
 
     // Пока не инициализирован будем рендерить спинер
     if (!hookValues) {
-        return <Spiner />
+        return (
+        <div className="h-screen flex justify-center items-center">
+         <Spiner />
+        </div>
+);
     }
     
     return (

@@ -9,11 +9,12 @@ from models import Users
 from database import SessionLocal
 from fastapi import Response  # Импортируем Response
 from fastapi.responses import JSONResponse
+import time
 
 # Конфигурация JWT
 SECRET_KEY = "your-secret-key-here"  # Замените на реальный секретный ключ
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 5
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_MINUTES = 60*24*30
 REFRESH_TOKEN_EXPIRE_MINUTES_LITE = 60
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,7 +28,7 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(seconds=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     payload = jwt.decode(encoded_jwt, SECRET_KEY, algorithms=[ALGORITHM])
@@ -97,7 +98,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 async def authenticate_user(userLogin: UserLogin, db):
     try:
         user = db.query(Users).filter(Users.mail == userLogin.mail).first()
+        print(user)
     except:
+        time.sleep(0.5)
         pass
     if not user:
         raise HTTPException(

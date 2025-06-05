@@ -36,19 +36,20 @@ async def change_service(service: Service, db):
         return user_service
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            message="Service doesn't exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Не удалось изменить настройки сервиса. Попробуйте в другой раз..."
         )
 
 async def delete_service(service: Service, db):
     check_service = db.query(Services).filter(Services.id == service.id).first()
+    print(check_service)
     if check_service:
         user_service = db.query(Services).filter(Services.id == service.id).delete()
         return check_service
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message="Service doesn't exists"
+            message="Не удаётся удалить сервис. Попролбуйте в другой раз..."
         )
 
 async def all_service(db, field, direction, page: int = 1, per_page: int = 10):

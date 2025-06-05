@@ -88,6 +88,19 @@ apiClient.interceptors.response.use(
             }
         }
 
+                // Можно добавить редиректы для определенных статусов
+                if (status === 500 && !originalRequest._retry) {
+                    originalRequest._retry = true;
+                    try{
+                        const response = await apiClient.post('/refresh')
+                        console.info(response.data.access_token);
+                        return apiClient(originalRequest);
+                    }
+                    catch{
+                        console.log('Ошибка 500')
+                    }
+                }
+
         // Пробрасываем нормализованную ошибку
         return Promise.reject({
             status,
@@ -101,27 +114,6 @@ export const api = {
     getCurrentUser: async () => {
         return apiClient.get('/get_current_user');
     },
-
-    setTheme: async (theme) => {
-        return apiClient.post('/theme', {theme});
-    },
-
-    setHelloCheck: async () => {
-        return apiClient.post('/hello-check');
-    },
-
-    taskOne: async () => {
-        return apiClient.get('/task-one');
-    },
-
-    taskTwo: async () => {
-        return apiClient.get('/task-two');
-    },
-
-    taskThree: async (query) => {
-        return apiClient.get('/task-three', {params: {query}});
-    },
-
     postLogin: async (mail, password, remember) => {
         return apiClient.post('/auth', {mail, password, remember});
     },

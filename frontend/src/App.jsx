@@ -17,6 +17,7 @@ import GeneralLayout from "./Layouts/GeneralLayout.jsx";
 import Edit from "./pages/Profile/Edit";
 import CreateRoute from './pages/routes/CreateRoute';
 import RoutePlayer from './pages/routes/RoutePlayer';
+import GuestLayout from './Layouts/GuestLayout';
 
 function App() {
     return (
@@ -29,22 +30,24 @@ function App() {
                         
                         {/* Аутентифицированные маршруты */}
                         <Route element={<AuthenticatedLayout/>}>
+                            <Route path='' element={<AppRoutes/>}/>
                             <Route path='routes' element={<AppRoutes/>}/>
                             <Route path="services" element={<Services/>}/>
-                            <Route path="create-route" element={<CreateRoute/>}/>
-                            <Route path="create-route/:routeId" element={<CreateRoute/>}/>
+                            <Route path="routes/create-route" element={<CreateRoute/>}/>
+                            <Route path="routes/create-route/:routeId" element={<CreateRoute/>}/>
                             <Route path="routes/play/:routeId" element={<RoutePlayer/>}/>
-                            <Route path="task-three" element={<TaskThree/>}/>
                             <Route path="profile" element={<Edit/>}/>
                             
                             {/* Админские маршруты с собственным layout */}
-                            <Route path="/admin" element={<AdminLayout/>}>
-                                <Route path="users" element={<Users/>}/>
-                                <Route path="services" element={<Services/>}/>
+                            <Route element={<AdminLayout/>}>
+                                <Route path="admin/users" element={<Users/>}/>
+                                <Route path="admin/services" element={<Services/>}/>
                             </Route>
-                            <Route path="*" element={<NotFound/>}/>
                         </Route>
-                        <Route path="login" element={<Login/>}/>
+                        <Route element={<GuestLayout/>}>
+                            <Route path="login" element={<Login/>}/>
+                        </Route>
+                        <Route path="*" element={<NotFound/>}/>
                         
                     </Route>
                 </Routes>

@@ -24,6 +24,13 @@ export default function Services() {
         total_pages: 1
     });
 
+    const PER_PAGE_OPTIONS = [
+        { value: 5, label: "5 записей" },
+        { value: 10, label: "10 записей" },
+        { value: 20, label: "20 записей" },
+        { value: 50, label: "50 записей" }
+    ];
+
     const SORT_OPTIONS_ADMIN = [
         {value: "name_desc", label: "По убыванию названия"},
         {value: "name_asc", label: "По возрастанию названия"},
@@ -47,6 +54,7 @@ export default function Services() {
     const [openInstructionId, setOpenInstructionId] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const [sortParam, setSortParam] = useState((location.pathname).startsWith("/admin") ? localStorage.getItem('service_sort_admin') || 'name_asc' : localStorage.getItem('service_sort') || 'name_asc');
+    const [perPage, setPerPage] = useState((location.pathname).startsWith("/admin") ? parseInt(localStorage.getItem('services_per_page_admin') || 10) : (parseInt(localStorage.getItem('services_per_page'))|| 10));
 
     const currentPage = parseInt(searchParams.get("page")) || 1;
 
@@ -71,19 +79,18 @@ export default function Services() {
         setOpenInstructionId(prevId => (prevId === id ? null : id));
     };
 
-    const fetchServices = async (page = 1, per_page = 10, sort = "id_asc") => {
+    const fetchServices = async (page = 1, per_page = perPage, sort = sortParam) => {
         try {
             setLoading(true);
             const [field, direction] = sort.split("_");
-            const responseAdmin = await api.getServices(page, per_page, field, direction);
-            const responseUser = await api.getAvailableServices(page, per_page, field, direction);
-
-            if (responseAdmin?.data) {
+            if ((location.pathname).startsWith("/admin")){
+                setAdmin(true);
+                const responseAdmin = await api.getServices(page, per_page, field, direction);
                 setServicesData(responseAdmin.data);
-                setServicesDataUser(responseUser.data)
-            } else {
-                setServicesData(prev => ({...prev, items: []}));
-                toast.error('Не удалось получить список сервисов');
+            }
+            else{
+                const responseUser = await api.getAvailableServices(page, per_page, field, direction);
+                setServicesDataUser(responseUser.data)               
             }
         } catch (error) {
             toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
@@ -155,7 +162,7 @@ export default function Services() {
             }
 
             if (response.data) {
-                fetchServices(currentPage, servicesData.per_page, sortParam);
+                fetchServices(currentPage, perPage, sortParam);
                 setIsServiceModalOpen(false);
             }
         } catch (error) {
@@ -165,6 +172,9 @@ export default function Services() {
     };
 
     const handleDelete = async (service) => {
+        if (!service?.instruction){
+            service.instruction = "";
+        }
         if (window.confirm('Вы уверены, что хотите удалить этот сервис?')) {
             try {
                 await api.deleteService(service);
@@ -186,18 +196,44 @@ export default function Services() {
         setSearchParams({page: 1});
     };
 
+    const handlePerPageChange = (e) => {
+        const newPerPage = parseInt(e.target.value);
+        setPerPage(newPerPage);
+        localStorage.setItem((location.pathname).startsWith("/admin") ? 'services_per_page_admin' : 'services_per_page', newPerPage.toString());
+        setSearchParams({page: 1});
+    };
+
+    const loadServiceHandler = (e) => {
+        if (admin) {
+            e.target.contentWindow.postMessage('secret_key', '*');
+        }
+    }
+
     useEffect(() => {
         setTimeout(() => {
-            fetchServices(currentPage, servicesData.per_page, sortParam);
+            fetchServices(currentPage, perPage, sortParam);
             if ((location.pathname).startsWith("/admin")) setAdmin(true);
             else setAdmin(false);
-
         }, 100);
     }, []);
 
+    
+
     useEffect(() => {
-        fetchServices(currentPage, servicesData.per_page, sortParam);
+        fetchServices(currentPage, perPage, sortParam);
     }, [currentPage, sortParam]);
+
+    useEffect(() => {
+        fetchServices(currentPage, perPage, sortParam);
+    }, [perPage]);
+
+    useEffect(() => {
+        const handleEsc = (event) => {
+            if (event.key === "Escape") setIsServiceModalOpen(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, []);
 
 
     const renderAdminServices = () => {
@@ -317,20 +353,11 @@ export default function Services() {
             .filter(service => service.available)
             .map(service => (
             <div key={service.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
                             {service.name}
                         </h3>
-                        <a
-                            href={service.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {service.url}
-                        </a>
                     </div>
 
                     <div className="flex gap-2">
@@ -340,7 +367,7 @@ export default function Services() {
                                     e.stopPropagation();
                                     toggleInstruction(service.id);
                                 }}
-                                className="flex items-center focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
+                                className="flex items-center h-11 focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
@@ -354,7 +381,7 @@ export default function Services() {
                                 e.stopPropagation();
                                 handleOpenAdminPanel(service);
                             }}
-                            className="inline-flex items-center text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
+                            className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -378,7 +405,7 @@ export default function Services() {
                             Описание сервиса:
                         </h4>
                         <div className="py-2 px-3 bg-gray-100 dark:bg-gray-700 rounded">
-                            <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-line">
+                            <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-line break-normal">
                                 {service.instruction}
                             </p>
                         </div>
@@ -403,30 +430,43 @@ export default function Services() {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
                                     Всего: {admin ? servicesData.total : servicesDataUser.total} сервисов
                                 </span>
-                                <br/>
-                                {admin ?
-                                <select
-                                    value={sortParam}
-                                    onChange={handleSortChange}
-                                    className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                >
-                                    {SORT_OPTIONS_ADMIN.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select> :
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                    {admin ?
+                                        <select
+                                            value={sortParam}
+                                            onChange={handleSortChange}
+                                            className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        >
+                                            {SORT_OPTIONS_ADMIN.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>
+                                                    {opt.label}
+                                                </option>
+                                            ))}
+                                        </select> :
+                                        <select
+                                            value={sortParam}
+                                            onChange={handleSortChange}
+                                            className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        >
+                                            {SORT_OPTIONS_USER.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>
+                                                    {opt.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    }
                                     <select
-                                        value={sortParam}
-                                        onChange={handleSortChange}
-                                        className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        value={perPage}
+                                        onChange={handlePerPageChange}
+                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
-                                        {SORT_OPTIONS_USER.map((opt) => (
+                                        {PER_PAGE_OPTIONS.map((opt) => (
                                             <option key={opt.value} value={opt.value}>
                                                 {opt.label}
                                             </option>
                                         ))}
-                                    </select>}
+                                    </select>
+                                </div>
                             </div>
                             {admin && (
                                 <button
@@ -453,8 +493,7 @@ export default function Services() {
                             <Spiner />
                         ) : (
                             <>
-                                
-                                {servicesData.items && servicesData.items.length > 0 ? (
+                                {(servicesData.items && servicesData.items.length>0) || (servicesDataUser.items && servicesDataUser.items.length>0) ? (
                                     <div className="space-y-4">
                                         {admin ? renderAdminServices() : renderUserServices()}
                                         {admin ? 
@@ -507,9 +546,13 @@ export default function Services() {
                                         URL сервиса
                                     </label>
                                     <input
-                                        type="url"
+                                        type="text"
                                         {...register('url', {
                                             required: 'Обязательное поле',
+                                            pattern: {
+                                                value: /^(https?:\/\/)?(www\.)?(([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}|(\d{1,3}\.){3}\d{1,3})(:\d{1,5})?(\/[^\s?#]*)?(\?[^#\s]*)?(#\S*)?$/i,
+                                                message: "Не является адресом сервиса"
+                                            }
                                         })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
@@ -582,7 +625,7 @@ export default function Services() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col dark:bg-gray-800">
                         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                            <h2 className="text-lg font-semibold dark:text-white">Админ-панель сервиса</h2>
+                            <h2 className="text-lg font-semibold dark:text-white">{admin ? "Админ-панель сервиса" : "Окно сервиса"}</h2>
                             <button
                                 onClick={closeAdminPanel}
                                 className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -594,6 +637,7 @@ export default function Services() {
                         </div>
                         <div className="flex-1 relative">
                             <iframe
+                                onLoad={loadServiceHandler}
                                 src={adminPanelUrl}
                                 className="absolute top-0 left-0 w-full h-full border-none"
                                 allowFullScreen

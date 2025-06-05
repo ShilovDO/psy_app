@@ -19,41 +19,39 @@ export default function ProfileInformation({
 
             </header>
             <div className="general-information flex">
-                <Avatar email={user?.email} size="xxl" className="me-10 mt-5"/>
+                <Avatar email={user?.email} size="xxl" className="me-10 mt-5 hidden sm:block"/>
                 <div className="information">
                     <div className="mt-6 space-y-6">
                         <div>
-                            <InputLabel htmlFor="name" value="Имя пользователя"/>
+                            <label htmlFor="name" value="Имя пользователя">Имя пользователя</label>
 
-                            <InfoField
+                            <h2
                                 id="name"
-                                className="mt-1 block"
-                                value={user?.username}
-                            />
+                                className="mt-1 block break-normal font-bold"
+                            >{user?.username}</h2>
 
                         </div>
                     </div>
                     <div className="mt-6 space-y-6">
-                        <div>
-                            <InputLabel htmlFor="email" value="Email"/>
-                            <InfoField
+                        <h3>
+                            <label htmlFor="email">Email</label>
+                            <h2
                                 id="email"
-                                className="mt-1 block"
-                                value={user?.email}
-                            />
+                                className="mt-1 block break-normal font-bold"
+                            
+                            >{user?.email}</h2>
 
-                        </div>
+                        </h3>
                     </div>
 
                     <div className="mt-6 space-y-6">
                         <div>
-                            <InputLabel htmlFor="role" value="Роль"/>
+                            <label htmlFor="role">Роль</label>
 
-                            <InfoField
+                            <h2
                                 id="role"
-                                className="mt-1 block"
-                                value={user?.admin ? "Админ" : "Психолог"}
-                            />
+                                className="mt-1 block break-normal font-bold"
+                            >{user?.admin ? "Админ" : "Психолог"}</h2>
                         </div>
                     </div>
                 </div>
