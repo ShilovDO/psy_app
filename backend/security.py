@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic_models import ID, TokenData, UserLogin, UserRegistration, User, FullUser
-from models import Users
+from models import Users, Routes, Stations
 from database import SessionLocal
 from fastapi import Response  # Импортируем Response
 from fastapi.responses import JSONResponse
@@ -211,22 +211,38 @@ async def all_users(db, field, direction, page: int = 1, per_page: int = 10):
     }
 
 async def delete_user(Id: ID, request: Request, db):
-    try:
+    #try:
         user_id = request.state.user.id
         check_user = db.query(Users).filter(Users.id == Id.id).first()
-        if check_user and user_id != check_user.id:
+
+        if check_user and user_id != check_user.id:         
+            check_route = db.query(Routes).filter(Routes.owner == Id.id).first()
+
+            while check_route:
+                check_stations = db.query(Stations).filter(Stations.route == check_route.id).first()
+
+                while check_stations:
+                    db.query(Stations).filter(Stations.route == check_route.id).delete()
+                    db.commit()
+                    check_stations = db.query(Stations).filter(Stations.route == check_route.id).first()
+
+                route = db.query(Routes).filter(Routes.id == check_route.id).delete()
+                db.commit()
+                check_route = db.query(Routes).filter(Routes.owner == Id.id).first()
+
             user = db.query(Users).filter(Users.id == Id.id).delete()
+            db.commit()
             return check_user
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Пользователь не существует"
             )
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Вы не можете это удалить"
-        )
+    # except:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Вы не можете это удалить"
+    #     )
 
 async def check_mail(db, mail: str):
     find_mail = db.query(Users).filter(Users.mail == mail).first()

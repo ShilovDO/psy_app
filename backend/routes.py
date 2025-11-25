@@ -115,6 +115,29 @@ async def change_station(station: NewStation, db):
             detail=str(e)
         )
 
+async def change_route(route_id: Route, route_name: NewRoute, db):
+    try:
+        # Находим станцию
+        existing_route = db.query(Stations).filter(Routes.id == route_id.id).first()
+
+        if not existing_route:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Route not found"
+            )
+
+        existing_route.name = route_name.name
+
+        db.commit()
+        return existing_route
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 async def all_station(route_id: int, db):
     stations_with_services = db.query(
         Stations,

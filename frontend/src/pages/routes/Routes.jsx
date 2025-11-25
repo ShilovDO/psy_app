@@ -37,7 +37,7 @@ export default function AppRoutes() {
   const navigate = useNavigate();
   const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_route') || 10));
 
-  const currentPage = parseInt(searchParams.get("page")) || 1;
+  let currentPage = parseInt(searchParams.get("page")) || 1;
 
   const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc") => {
     try {

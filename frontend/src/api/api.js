@@ -8,7 +8,7 @@ export const setNavigate = (navigateFunction) => {
 };
 
 const ACCESS_TOKEN = 'accessToken';
-const BASE_URL = '/api';
+const BASE_URL = 'http://localhost:8001';
 
 // Создаем кастомный экземпляр axios
 const apiClient = axios.create({

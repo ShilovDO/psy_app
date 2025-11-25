@@ -109,13 +109,12 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 # Разрешаем запросы с указанных доменов (в вашем случае — фронтенд на `localhost:5177`)
+# Разрешаем запросы с указанных доменов (в вашем случае — фронтенд на `localhost:5177`)
 origins = [
-    "http://192.168.0.233",
-    "http://176.108.249.27",
-    "http://localhost",
-    "http://frontend"
+    #"*"
+    "http://localhost:5177",  # Ваш Vite/React фронтенд
+    "http://127.0.0.1:5177",  
 ]
-
 
 app.middleware("http")(auth_middleware)
 
@@ -123,10 +122,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Set-Cookie", "Authorization"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["*"]
 )
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
