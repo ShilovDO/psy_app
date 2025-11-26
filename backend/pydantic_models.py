@@ -54,11 +54,22 @@ class NewRoute(BaseModel):
 class Route(BaseModel):
     id: int
 
+class ChangeRoute(BaseModel):
+    id: int
+    name: str
+
 class NewStation(BaseModel):
     route_id: int
     number: int
     next: int
     entry: bool
+    service: int
+    description: str
+
+class ChangeStation(BaseModel):
+    id: int
+    number: int
+    next: int
     service: int
     description: str
 

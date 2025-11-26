@@ -90,26 +90,64 @@ export default function CreateRoute() {
 
         try {
             setLoading(true);
-            if(routeId){
-                await api.deleteRoute(routeId);
-            }
             const routeResponse = await api.createRoute({ name: routeName });
+
             const route_id = routeResponse.data.id;
-            
-            for (const station of stations) {
-                const data_stations = {
-                    route_id: route_id,
-                    number: station.number,
-                    service: station.service,
-                    next: station.number === stations.length ? 0 : station.number + 1,
-                    entry: false,
-                    description: station.description
+            if(routeId){
+
+                await api.changeRoute({id: routeId, name: routeName});
+
+                for (const station of stations) {
+                    let data_stations = {
+                        id: station.id,
+                        number: station.number,
+                        service: station.service,
+                        next: station.number === stations.length ? 0 : station.number + 1,
+                        description: station.description
+                    }
+                    alert(data_stations.id)
+                    if (data_stations.id !== undefined)
+                    {
+                        try {
+                            await api.changeStation(data_stations);
+                        }
+                        catch {
+                            await api.deleteStation(data_stations.id)
+                        }
+                    }
+                    else
+                    {
+                        data_stations = {
+                            route_id: route_id,
+                            number: station.number,
+                            service: station.service,
+                            next: station.number === stations.length ? 0 : station.number + 1,
+                            entry: false,
+                            description: station.description
+                        }
+                        await api.createStation(data_stations);
+                    }
                 }
-                await api.createStation(data_stations);
             }
-            
-            toast.success("Маршрут успешно создан");
-            navigate("/routes");
+            else{
+
+                
+                
+                for (const station of stations) {
+                    const data_stations = {
+                        route_id: route_id,
+                        number: station.number,
+                        service: station.service,
+                        next: station.number === stations.length ? 0 : station.number + 1,
+                        entry: false,
+                        description: station.description
+                    }
+                    await api.createStation(data_stations);
+                }
+                
+                toast.success("Маршрут успешно создан");
+                navigate("/routes");
+            }
         } catch (error) {
             console.error("Ошибка при создании маршрута:", error);
             toast.error(error.response?.data?.detail || "Ошибка при создании маршрута");

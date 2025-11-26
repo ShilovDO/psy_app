@@ -26,14 +26,19 @@ from routes import (
     create_route,
     add_station,
     delete_route,
+    delete_station,
     all_route,
-    all_station, change_station, get_route
+    all_station, 
+    change_station,
+    change_route, 
+    get_route
 )
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from typing import Annotated
 from pydantic import BaseModel
-from pydantic_models import UserLogin, TokenData, Token, UserRegistration, NewService, Service, ID, NewRoute, NewStation, Route, FullUser, User
+from pydantic_models import (UserLogin, TokenData, Token, UserRegistration, NewService, Service, ID, NewRoute, 
+NewStation, Route, FullUser, User, ChangeStation, ChangeRoute)
 from fastapi import APIRouter, Depends
 from fastapi import Response
 from middleware.middleware import auth_middleware
@@ -379,13 +384,22 @@ async def addStation(station: NewStation):
     return route
 
 @app.post("/change_station")
-async def changeStation(station: NewStation):
+async def changeStation(station: ChangeStation):
     db = SessionLocal()
     station = await change_station(station, db)
     db.commit()
     db.refresh(station)
     db.close()
     return station
+
+@app.post("/change_route")
+async def changeStation(route: ChangeRoute):
+    db = SessionLocal()
+    route = await change_route(route, db)
+    db.commit()
+    db.refresh(route)
+    db.close()
+    return route
 
 @app.post("/delete_route")
 async def deleteRoute(route: Route):
@@ -394,6 +408,14 @@ async def deleteRoute(route: Route):
     db.commit()
     db.close()
     return route
+
+@app.post("/delete_station")
+async def deleteRoute(station: Route):
+    db = SessionLocal()
+    station = await delete_station(station, db)
+    db.commit()
+    db.close()
+    return station
 
 @app.get("/all_route")
 async def allRoute(request: Request, field: str, direction: str, page: int = 1, per_page: int = 10, ):

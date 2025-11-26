@@ -1,5 +1,7 @@
+import sys
+import traceback
 from fastapi import Depends, HTTPException, status, Request
-from pydantic_models import NewRoute, NewStation, Route
+from pydantic_models import NewRoute, NewStation, Route, ChangeRoute, ChangeStation
 from models import Services, Routes, Stations
 
 async def create_route(route: NewRoute, request: Request, db):
@@ -24,16 +26,24 @@ async def add_station(service: NewStation, db):
             number=service.number,
             next=service.next,
             entry=service.entry,
-            service=service.service
+            service=service.service,
+            description=service.description
         )
         db.add(new_service)
         db.commit()
         db.refresh(new_service)
         return new_service
-    except:
+    except Exception as e:
+        # Получаем полный traceback
+        error_traceback = traceback.format_exc()
+
+        # Логируем в консоль (в продакшене используйте нормальное логирование)
+        print(f"Full error traceback:\n{error_traceback}")
+
+        # Поднимаем исключение с информацией об ошибке
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message="Error adding a record to the database"
+            detail=f"Error adding a record to the database: {str(e)}"
         )
 
 async def delete_route(route: Route, db):
@@ -43,7 +53,18 @@ async def delete_route(route: Route, db):
         if check_stations:
             db.query(Stations).filter(Stations.route == route.id).delete()
         user_route = db.query(Routes).filter(Routes.id == route.id).delete()
-        return check_route
+        return user_route
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Route doesn't exists"
+        )
+
+async def delete_station(station: Route, db):
+    check_stations = db.query(Stations).filter(Stations.id == station.id).first()
+    if check_stations:
+        user_stations = db.query(Stations).filter(Stations.id == station.id).delete()   
+        return user_stations
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,13 +105,10 @@ async def all_route(request: Request, field: str, direction: str, db, page: int 
     }
 
 
-async def change_station(station: NewStation, db):
+async def change_station(station: ChangeStation, db):
     try:
         # Находим станцию
-        existing_station = db.query(Stations).filter(
-            Stations.route == station.route_id,
-            Stations.number == station.number
-        ).first()
+        existing_station = db.query(Stations).filter(Stations.id == station.id).first()
 
         if not existing_station:
             raise HTTPException(
@@ -99,15 +117,20 @@ async def change_station(station: NewStation, db):
             )
 
         # Обновляем поля
+        if station.number is not None:
+            existing_station.number = station.number
         if station.next is not None:
             existing_station.next = station.next
-        if station.entry is not None:
-            existing_station.entry = station.entry
         if station.service is not None:
             existing_station.service = station.service
+        if station.description is not None:
+            existing_station.description = station.description
+
+        existing_station.entry = False
 
         db.commit()
         return existing_station
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -115,10 +138,10 @@ async def change_station(station: NewStation, db):
             detail=str(e)
         )
 
-async def change_route(route_id: Route, route_name: NewRoute, db):
+async def change_route(route: ChangeRoute, db):
     try:
         # Находим станцию
-        existing_route = db.query(Stations).filter(Routes.id == route_id.id).first()
+        existing_route = db.query(Routes).filter(Routes.id == route.id).first()
 
         if not existing_route:
             raise HTTPException(
@@ -126,7 +149,7 @@ async def change_route(route_id: Route, route_name: NewRoute, db):
                 detail="Route not found"
             )
 
-        existing_route.name = route_name.name
+        existing_route.name = route.name
 
         db.commit()
         return existing_route

@@ -57,11 +57,12 @@ class Stations(Base):
     __table_args__ = (
         ForeignKeyConstraint(['route'], ['routes.id'], name='fk_stations_route'),
         ForeignKeyConstraint(['service'], ['services.id'], name='fk_stations_service'),
-        PrimaryKeyConstraint('route', 'number', name='stations_pkey')
+        PrimaryKeyConstraint('id', name='stations_pkey')
     )
 
-    route: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True)
+    route: Mapped[int] = mapped_column(BigInteger)
+    number: Mapped[int] = mapped_column(Integer)
     next: Mapped[int] = mapped_column(Integer)
     entry: Mapped[bool] = mapped_column(Boolean)
     service: Mapped[int] = mapped_column(Integer)

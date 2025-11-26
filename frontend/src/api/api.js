@@ -153,6 +153,9 @@ export const api = {
     deleteRoute: async (routeId) => {
         return apiClient.post('/delete_route', { id: routeId });
     },
+    deleteStation: async (routeId) => {
+        return apiClient.post('/delete_station', { id: stationId });
+    },
     getStations: async (routeId) => {
         console.log(`API ID output :`);
         console.log(Number(routeId));
@@ -166,6 +169,9 @@ export const api = {
     },
     changeStation: async (data) => {
         return apiClient.post('/change_station', data);
+    },
+    changeRoute: async (data) => {
+        return apiClient.post('/change_route', data);
     },
     checkMail: async (data) => {
         return apiClient.get(`/check_mail/${data}`);
