@@ -8,6 +8,7 @@ export default function CreateRoute() {
     const { routeId } = useParams();
     const [routeName, setRouteName] = useState("");
     const [stations, setStations] = useState([]);
+    const [deletedStations, setDeletedStations] = useState([]);
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loadingServices, setLoadingServices] = useState(false);
@@ -61,6 +62,9 @@ export default function CreateRoute() {
 
     const removeStation = (index) => {
         const updatedStations = [...stations];
+
+        setDeletedStations([...deletedStations, updatedStations[index]])
+
         updatedStations.splice(index, 1);
         setStations(updatedStations.map((station, idx) => ({
             ...station,
@@ -90,9 +94,8 @@ export default function CreateRoute() {
 
         try {
             setLoading(true);
-            const routeResponse = await api.createRoute({ name: routeName });
 
-            const route_id = routeResponse.data.id;
+
             if(routeId){
 
                 await api.changeRoute({id: routeId, name: routeName});
@@ -108,17 +111,12 @@ export default function CreateRoute() {
                     alert(data_stations.id)
                     if (data_stations.id !== undefined)
                     {
-                        try {
-                            await api.changeStation(data_stations);
-                        }
-                        catch {
-                            await api.deleteStation(data_stations.id)
-                        }
+                        await api.changeStation(data_stations);
                     }
                     else
                     {
                         data_stations = {
-                            route_id: route_id,
+                            route_id: routeId,
                             number: station.number,
                             service: station.service,
                             next: station.number === stations.length ? 0 : station.number + 1,
@@ -128,10 +126,15 @@ export default function CreateRoute() {
                         await api.createStation(data_stations);
                     }
                 }
+                
+                for (const deleted_station of deletedStations){
+                    await api.deleteStation(deleted_station.id);
+                }
             }
             else{
 
-                
+                const routeResponse = await api.createRoute({ name: routeName });
+                const route_id = routeResponse.data.id;
                 
                 for (const station of stations) {
                     const data_stations = {
@@ -145,9 +148,9 @@ export default function CreateRoute() {
                     await api.createStation(data_stations);
                 }
                 
-                toast.success("Маршрут успешно создан");
-                navigate("/routes");
             }
+            toast.success("Маршрут успешно создан");
+            navigate("/routes");
         } catch (error) {
             console.error("Ошибка при создании маршрута:", error);
             toast.error(error.response?.data?.detail || "Ошибка при создании маршрута");
