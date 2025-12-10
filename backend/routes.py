@@ -2,7 +2,7 @@ import sys
 import traceback
 from fastapi import Depends, HTTPException, status, Request
 from pydantic_models import NewRoute, NewStation, Route, ChangeRoute, ChangeStation
-from models import Services, Routes, Stations
+from models import Services, Routes, Stations, Configs
 
 async def create_route(route: NewRoute, request: Request, db):
     user_id = request.state.user.id
@@ -164,11 +164,16 @@ async def change_route(route: ChangeRoute, db):
 async def all_station(route_id: int, db):
     stations_with_services = db.query(
         Stations,
+        Configs.name.label('config_name'),
+        Configs.description.label('config_description'),
+        Configs.id.label('config_id'),
         Services.name.label('service_name'),
         Services.url.label('url'),
         Services.available.label('available'),
     ).join(
-        Services, Stations.service == Services.id
+        Configs, Stations.config == Configs.id
+    ).join(
+        Services, Configs.service == Services.id
     ).filter(
         Stations.route == route_id
     ).order_by(Stations.number).all()

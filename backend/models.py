@@ -19,7 +19,8 @@ class Services(Base):
     available: Mapped[bool] = mapped_column(Boolean)
     admin: Mapped[bool] = mapped_column(Boolean)
     instruction: Mapped[str] = mapped_column(Text)
-    stations: Mapped[List['Stations']] = relationship('Stations', back_populates='services')
+
+    configs: Mapped[List['Configs']] = relationship("Configs", back_populates="services")
 
 
 class Users(Base):
@@ -56,7 +57,7 @@ class Stations(Base):
     __tablename__ = 'stations'
     __table_args__ = (
         ForeignKeyConstraint(['route'], ['routes.id'], name='fk_stations_route'),
-        ForeignKeyConstraint(['service'], ['services.id'], name='fk_stations_service'),
+        ForeignKeyConstraint(['config'], ['configs.id'], name='fk_stations_config'),
         PrimaryKeyConstraint('id', name='stations_pkey')
     )
 
@@ -65,8 +66,27 @@ class Stations(Base):
     number: Mapped[int] = mapped_column(Integer)
     next: Mapped[int] = mapped_column(Integer)
     entry: Mapped[bool] = mapped_column(Boolean)
-    service: Mapped[int] = mapped_column(Integer)
+    config: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(Text)
 
     routes: Mapped['Routes'] = relationship('Routes', back_populates='stations')
-    services: Mapped['Services'] = relationship('Services', back_populates='stations')
+    configs: Mapped['Configs'] = relationship('Configs', back_populates='stations')
+
+
+class Configs(Base):
+    __tablename__ = 'configs'
+    __table_args__ = (
+        ForeignKeyConstraint(['service'], ['services.id'], name='configs_services_serviceid_fk'),
+        ForeignKeyConstraint(['owner'], ['users.id'], name='configs_services_userid_fk'),
+        PrimaryKeyConstraint('id', name='configs_pk')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text)
+    owner: Mapped[int] = mapped_column(BigInteger)
+    service: Mapped[int] = mapped_column(BigInteger)
+
+    users: Mapped['Users'] = relationship('Users', back_populates='configs')
+    stations: Mapped[List['Stations']] = relationship("Stations", back_populates="configs")
+    services: Mapped['Services'] = relationship('Services', back_populates='configs')

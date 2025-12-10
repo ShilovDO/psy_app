@@ -19,6 +19,8 @@ export default function RoutePlayer() {
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [showStationModal, setShowStationModal] = useState(false);
     const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+    const iframeRef = useRef(null);
+
 
     // Загрузка данных маршрута
     useEffect(() => {
@@ -63,6 +65,16 @@ export default function RoutePlayer() {
 
         fetchRouteData();
     }, [routeId, navigate]);
+
+    
+    useEffect(() => {
+        if (showStationModal && iframeRef.current) {
+            iframeRef.current.contentWindow.postMessage(
+                { type: "MODAL_OPENED", station: currentStation },
+                "*"
+            );
+        }
+    }, [showStationModal]);
 
     const currentStation = stations[currentStationIndex];
 
@@ -416,6 +428,7 @@ export default function RoutePlayer() {
                             </div>
                             <div className="flex-1 relative">
                                 <iframe
+                                    ref={iframeRef}
                                     src={currentStation.url}
                                     title={`Станция ${currentStation.number}`}
                                     className="absolute inset-0 w-full h-full border-0"
