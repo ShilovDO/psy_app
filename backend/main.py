@@ -20,7 +20,10 @@ from services import (
     change_service,
     all_service,
     available_service,
-    delete_service
+    delete_service,
+    create_config,
+    delete_config,
+    all_config
 )
 from routes import (
     create_route,
@@ -38,7 +41,7 @@ from datetime import datetime, timedelta
 from typing import Annotated
 from pydantic import BaseModel
 from pydantic_models import (UserLogin, TokenData, Token, UserRegistration, NewService, Service, ID, NewRoute, 
-NewStation, Route, FullUser, User, ChangeStation, ChangeRoute)
+    NewStation, Route, FullUser, User, ChangeStation, ChangeRoute, NewConfig)
 from fastapi import APIRouter, Depends
 from fastapi import Response
 from middleware.middleware import auth_middleware
@@ -363,9 +366,39 @@ async def allService(field, direction, page: int = 1, per_page: int = 10):
     db.close()
     return result
 
+@app.post("/add_config")
+async def addService(new_config: NewConfig, request: Request):
+    db = SessionLocal()
+    print(new_config)
+    config = await create_config(new_config, request, db)
+    db.add(config)
+    db.commit()
+    db.refresh(config)
+    db.close()
+    return config
+
+@app.post("/delete_config")
+async def addService(del_config: ID):
+    db = SessionLocal()
+    config = await delete_config(del_config, db)
+    db.commit()
+    db.close()
+    return config
+
+@app.get("/all_config")
+async def allConfig(sort: int, field: str, direction: str, page: int = 1, per_page: int = 10):
+    db = SessionLocal()
+    print('ok')
+    result = await all_config(db, sort, field, direction, page, per_page)
+    print('very ok')
+    db.close()
+    return result
+
 @app.post("/add_route")
 async def addRoute(new_route: NewRoute, request: Request):
     db = SessionLocal()
+    user_id = request.state.user.id
+    print(user_id)
     route = await create_route(new_route, request, db)
     db.add(route)
     db.commit()

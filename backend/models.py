@@ -36,6 +36,8 @@ class Users(Base):
     admin: Mapped[bool] = mapped_column(Boolean)
 
     routes: Mapped[List['Routes']] = relationship('Routes', back_populates='users')
+    configs: Mapped[List['Configs']] = relationship('Configs', back_populates='users')
+
 
 
 class Routes(Base):

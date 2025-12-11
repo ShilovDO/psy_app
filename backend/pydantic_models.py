@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, TypeVar, Generic
-from models import Routes
+from models import Routes, Configs
 
 class Token(BaseModel):
     access_token: str
@@ -72,6 +72,11 @@ class ChangeStation(BaseModel):
     next: int
     service: int
     description: str
+
+class NewConfig(BaseModel):
+    name: str
+    description: str
+    service: int
 
 class PaginatedRoutesResponse(BaseModel):
     class Config:

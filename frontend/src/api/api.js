@@ -179,4 +179,8 @@ export const api = {
     getRoute: async (data) => {
         return apiClient.get(`/get_route/${data}`);
     },
+
+    getConfigs: async (page = 1, perPage = 10, field='name', direction='asc', sort=0) => {
+        return apiClient.get('/all_config', { params: { page, per_page: perPage, field, direction, sort } });
+    },
 };
