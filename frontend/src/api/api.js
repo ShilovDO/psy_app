@@ -135,6 +135,9 @@ export const api = {
     getAvailableServices: async (page = 1, perPage = 10, field='name', direction='asc') => {
         return apiClient.get('/available_service', { params: { page, per_page: perPage, field, direction } });
     },
+    getConfigurableServices: async (page = 1, perPage = 10, field='name', direction='asc') => {
+        return apiClient.get('/configurable_service');
+    },
     updateUser: async (data) => {
         return apiClient.post('/change_user', data);
     },
@@ -182,5 +185,8 @@ export const api = {
 
     getConfigs: async (page = 1, perPage = 10, field='name', direction='asc', sort=0) => {
         return apiClient.get('/all_config', { params: { page, per_page: perPage, field, direction, sort } });
+    },
+    createConfig: async (data) => {
+        return apiClient.post('/add_config', data);
     },
 };

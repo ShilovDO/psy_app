@@ -63,14 +63,14 @@ class NewStation(BaseModel):
     number: int
     next: int
     entry: bool
-    service: int
+    config: int
     description: str
 
 class ChangeStation(BaseModel):
     id: int
     number: int
     next: int
-    service: int
+    config: int
     description: str
 
 class NewConfig(BaseModel):

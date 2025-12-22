@@ -118,55 +118,72 @@ async def delete_config(config_id: ID, db):
             message="Не удаётся удалить сервис. Попролбуйте в другой раз..."
         )
 
-async def all_config(db, sort, field, direction, page: int = 1, per_page: int = 10):
+async def all_config(request: Request, db, sort, field, direction, page: int = 1, per_page: int = 10):
+    user_id = request.state.user.id
+
     # Вычисляем смещение
     offset = (page - 1) * per_page
     
     # Получаем общее количество сервисов
-    total = db.query(Configs).count()
+    total = db.query(Configs).filter(Configs.owner == user_id).count()
 
     # Получаем пагинированный список сервисов
     if (sort == 0):
         if (field == "name" and direction == "asc"):
-            services = db.query(Configs).order_by(Configs.name).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(Configs.owner == user_id).order_by(
+                Configs.name).offset(offset).limit(per_page).all()
         elif (field == "name" and direction == "desc"):
-            services = db.query(Configs).order_by(Configs.name.desc()).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(Configs.owner == user_id).order_by(
+                Configs.name.desc()).offset(offset).limit(per_page).all()
         elif (field == "id" and direction == "asc"):
-            services = db.query(Configs).order_by(Configs.id).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(Configs.owner == user_id).order_by(
+                Configs.id).offset(offset).limit(per_page).all()
         elif (field == "id" and direction == "desc"):
-            services = db.query(Configs).order_by(Configs.id.desc()).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(Configs.owner == user_id).order_by(
+                Configs.id.desc()).offset(offset).limit(per_page).all()
         else:
-            services = db.query(Configs).offset(offset).limit(per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).offset(offset).limit(per_page).all()
     else:
         if (field == "name" and direction == "asc"):
-            services = db.query(Configs).filter(Configs.service == sort).order_by(Configs.name).offset(offset).limit(
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(
+                Configs.service == sort, Configs.owner == user_id).order_by(Configs.name).offset(offset).limit(
                 per_page).all()
         elif (field == "name" and direction == "desc"):
-            services = db.query(Configs).filter(Configs.service == sort).order_by(Configs.name.desc()).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(
+                Configs.service == sort, Configs.owner == user_id).order_by(Configs.name.desc()).offset(offset).limit(per_page).all()
         elif (field == "id" and direction == "asc"):
-            services = db.query(Configs).filter(Configs.service == sort).order_by(Configs.id).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(
+                Configs.service == sort, Configs.owner == user_id).order_by(Configs.id).offset(offset).limit(per_page).all()
         elif (field == "id" and direction == "desc"):
-            services = db.query(Configs).filter(Configs.service == sort).order_by(Configs.id.desc()).offset(offset).limit(
-                per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(
+                Configs.service == sort, Configs.owner == user_id).order_by(Configs.id.desc()).offset(offset).limit(per_page).all()
         else:
-            services = db.query(Configs).filter(Configs.service == sort).offset(offset).limit(per_page).all()
+            services = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(
+                Configs.service == sort, Configs.owner == user_id).offset(offset).limit(per_page).all()
     
     # Вычисляем общее количество страниц
     total_pages = (total + per_page - 1) // per_page
     
+    items = []
+
+    for config, url in services:
+        items.append({
+            "id": config.id,
+            "name": config.name,
+            "service": config.service,
+            "owner": config.owner,
+            "url": url
+        })
+
     return {
-        "items": services,
+        "items": items,
         "total": total,
         "page": page,
         "per_page": per_page,
         "total_pages": total_pages
     }
+
+
 
 async def available_service(db, field, direction, page: int = 1, per_page: int = 10):
     # Вычисляем смещение
@@ -202,3 +219,10 @@ async def available_service(db, field, direction, page: int = 1, per_page: int =
         "per_page": per_page,
         "total_pages": total_pages
     }
+    
+async def configurable_service(db):
+    services = db.query(Services).filter(Services.admin == True).all()
+    return {
+        "items": services
+    }
+    

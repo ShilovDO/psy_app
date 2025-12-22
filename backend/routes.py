@@ -19,20 +19,20 @@ async def get_route(route: Route, db):
     find_route = db.query(Routes).filter(Routes.id == route.id).first()
     return find_route
 
-async def add_station(service: NewStation, db):
+async def add_station(station: NewStation, db):
     try:
-        new_service = Stations(
-            route=service.route_id,
-            number=service.number,
-            next=service.next,
-            entry=service.entry,
-            service=service.service,
-            description=service.description
+        new_station = Stations(
+            route=station.route_id,
+            number=station.number,
+            next=station.next,
+            entry=station.entry,
+            config=station.config,
+            description=station.description
         )
-        db.add(new_service)
+        db.add(new_station)
         db.commit()
-        db.refresh(new_service)
-        return new_service
+        db.refresh(new_station)
+        return new_station
     except Exception as e:
         # Получаем полный traceback
         error_traceback = traceback.format_exc()
@@ -121,8 +121,8 @@ async def change_station(station: ChangeStation, db):
             existing_station.number = station.number
         if station.next is not None:
             existing_station.next = station.next
-        if station.service is not None:
-            existing_station.service = station.service
+        if station.config is not None:
+            existing_station.config = station.config
         if station.description is not None:
             existing_station.description = station.description
 

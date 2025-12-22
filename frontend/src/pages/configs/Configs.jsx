@@ -8,7 +8,9 @@ import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import {useSearchParams} from "react-router-dom";
 
+
 export default function Configs() {
+    const [loadingServices, setLoadingServices] = useState(false);
     const [servicesData, setServicesData] = useState({
         items: [],
         total: 0,
@@ -63,17 +65,24 @@ export default function Configs() {
         {value: "id_asc", label: "Сначала старые"},
     ];
     const [loading, setLoading] = useState(false);
-    const [editingService, setEditingService] = useState(null);
+    const [editingConfig, setEditingConfig] = useState(null);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [adminPanelUrl, setAdminPanelUrl] = useState(null);
-    const [admin, setAdmin] = useState(false);
-    const [openInstructionId, setOpenInstructionId] = useState(null);
+    const [admin, setAdmin] = useState(true);
+    const [opendescriptionId, setOpendescriptionId] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const [sortParam, setSortParam] = useState((location.pathname).startsWith("/admin") ? localStorage.getItem('service_sort_admin') || 'name_asc' : localStorage.getItem('service_sort') || 'name_asc');
     const [perPage, setPerPage] = useState((location.pathname).startsWith("/admin") ? parseInt(localStorage.getItem('services_per_page_admin') || 10) : (parseInt(localStorage.getItem('services_per_page'))|| 10));
     const [serviceParam, setServiceParam] = useState(localStorage.getItem('service_filter') || '0');
     const currentPage = parseInt(searchParams.get("page")) || 1;
+    const [services, setServices] = useState([]);
+    
+    const updateStation = (index, field, value) => {
+        const updatedStations = [...stations];
+        updatedStations[index][field] = value;
+        setStations(updatedStations);
+    };
 
     const {
         register,
@@ -86,36 +95,46 @@ export default function Configs() {
         defaultValues: {
             name: '',
             url: '',
-            instruction: '',
+            description: '',
             available: false,
             admin: false
         },
     });
 
-    const toggleInstruction = (id) => {
-        setOpenInstructionId(prevId => (prevId === id ? null : id));
-    };
-
-    const fetchServices = async (page = 1, per_page = perPage, sort = sortParam) => {
+    const fetchServices = async () => {
         try {
-            setLoading(true);
-            const [field, direction] = sort.split("_");
-            if ((location.pathname).startsWith("/admin")){
-                setAdmin(true);
-                const responseAdmin = await api.getServices(page, per_page, field, direction);
-                setServicesData(responseAdmin.data);
-            }
-            else{
-                const responseUser = await api.getAvailableServices(page, per_page, field, direction);
-                setServicesDataUser(responseUser.data)               
+            setLoadingServices(true);
+            const response = await api.getConfigurableServices();
+            if (response?.data?.items) {
+                setServices(response.data.items);
             }
         } catch (error) {
-            toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
-            console.error('Ошибка при загрузке сервисов:', error);
+            toast.error("Не удалось загрузить список сервисов");
+            console.error("Ошибка загрузки сервисов:", error);
         } finally {
-            setLoading(false);
+            setLoadingServices(false);
         }
     };
+
+    const toggledescription = (id) => {
+        setOpendescriptionId(prevId => (prevId === id ? null : id));
+    };
+
+    // const fetchServices = async (page = 1, per_page = perPage, sort = sortParam) => {
+    //     try {
+    //         setLoading(true);
+    //         const [field, direction] = sort.split("_");
+    //         const responseAdmin = await api.getConfigs(page, per_page, field, direction, serviceParam)
+    //         setServicesData(responseAdmin.data);
+    //         setServicesDataUser(responseAdmin.data)    
+            
+    //     } catch (error) {
+    //         toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
+    //         console.error('Ошибка при загрузке сервисов:', error);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     const fetchConfigs = async (page = 1, per_page = perPage, sort = sortParam, serviceParam=0) => {
         try {
@@ -136,25 +155,21 @@ export default function Configs() {
 
     const handleCreateClick = () => {
         setIsCreating(true);
-        setEditingService(null);
+        setEditingConfig(null);
         reset({
             name: '',
-            url: '',
-            instruction: '',
-            available: false,
-            admin: false
+            description: '',
+            service: ''
         });
         setIsServiceModalOpen(true);
     };
 
-    const handleEditClick = (service) => {
+    const handleEditClick = (config) => {
         setIsCreating(false);
-        setEditingService(service);
-        setValue('name', service.name);
-        setValue('url', service.url);
-        setValue('instruction', service.instruction);
-        setValue('available', service.available);
-        setValue('admin', service.admin);
+        setEditingConfig(config);
+        setValue('name', config.name);
+        setValue('description', config.description);
+        setValue('service', config.service);
         setIsServiceModalOpen(true);
     };
 
@@ -169,24 +184,26 @@ export default function Configs() {
     };
 
     const onSubmit = async (data) => {
+        console.info(data)
         try {
             let response;
             if (isCreating) {
                 const dataToCreate = {
                     name: data.name,
-                    url: data.url,
-                    instruction: data.instruction,
-                    available: Boolean(data.available),
-                    admin: Boolean(data.admin)
+                    description: data.description,
+                    service: data.service
                 };
-                response = await api.createService(dataToCreate);
+                response = await api.createConfig(dataToCreate);
                 toast.success('Сервис успешно создан');
+
+                setIsServiceModalOpen(true);
+
             } else {
                 const dataToSend = {
-                    id: Number(editingService.id),
+                    id: Number(editingConfig.id),
                     name: data.name,
                     url: data.url,
-                    instruction: data.instruction,
+                    description: data.description,
                     available: Boolean(data.available),
                     admin: Boolean(data.admin)
                 };
@@ -195,8 +212,8 @@ export default function Configs() {
             }
 
             if (response.data) {
-                fetchServices(currentPage, perPage, sortParam);
-                setIsServiceModalOpen(false);
+                fetchConfigs(currentPage, perPage, sortParam);
+                
             }
         } catch (error) {
             console.error('Full error:', error);
@@ -205,14 +222,14 @@ export default function Configs() {
     };
 
     const handleDelete = async (service) => {
-        if (!service?.instruction){
-            service.instruction = "";
+        if (!service?.description){
+            service.description = "";
         }
         if (window.confirm('Вы уверены, что хотите удалить этот сервис?')) {
             try {
                 await api.deleteService(service);
                 toast.success('Сервис удален');
-                fetchServices(currentPage, servicesData.per_page, sortParam);
+                fetchConfigs(currentPage, servicesData.per_page, sortParam);
             } catch (error) {
                 toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса');
             }
@@ -245,20 +262,19 @@ export default function Configs() {
     useEffect(() => {
         setTimeout(() => {
             fetchConfigs(currentPage, perPage, sortParam, serviceParam);
-            fetchServices(currentPage, perPage, sortParam);
+            fetchServices();
             if ((location.pathname).startsWith("/admin")) setAdmin(true);
-            else setAdmin(false);
         }, 100);
     }, []);
 
     
 
     useEffect(() => {
-        fetchServices(currentPage, perPage, sortParam);
+        fetchConfigs(currentPage, perPage, sortParam);
     }, [currentPage, sortParam]);
 
     useEffect(() => {
-        fetchServices(currentPage, perPage, sortParam);
+        fetchConfigs(currentPage, perPage, sortParam);
     }, [perPage]);
 
     useEffect(() => {
@@ -271,120 +287,8 @@ export default function Configs() {
 
 
     const renderAdminServices = () => {
-        return servicesData.items.map((service) => (
-            <div
-                key={service.id}
-                className="flex flex-col p-4 border-b border-gray-100 dark:border-gray-700 transition-colors"
-            >
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-2">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
-                            {service.name}
-                        </h3>  
-                        <a
-                            href={service.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={(e) => e.stopPropagation()}>
-                            {service.url}
-                        </a>
-                        <span className={`w-fit p-2 py-1 text-xs rounded-full ${
-                            service.available
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
-                            {service.available ? 'Доступен' : 'Недоступен'}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {service.admin && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenAdminPanel(service);
-                                }}
-                                className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 flex-shrink-0 me-1"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                                </svg>
-                                Админ-панель
-                            </button>
-                        )}
-
-                        <Dropdown>
-                            <Dropdown.Trigger>
-                                <button
-                                    type="button"
-                                    className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300"
-                                >
-                                    <svg
-                                        className="h-full w-auto text-center m-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"
-                                        />
-                                    </svg>
-                                </button>
-                            </Dropdown.Trigger>
-
-                            <Dropdown.Content>
-                                <Dropdown.Link
-                                    as="button"
-                                    onClick={() => handleEditClick(service)}
-                                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-5 w-5 mr-2"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Изменить
-                                </Dropdown.Link>
-
-                                <Dropdown.Link
-                                    as="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDelete(service);
-                                    }}
-                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-5 w-5 mr-2"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Удалить
-                                </Dropdown.Link>
-                            </Dropdown.Content>
-                        </Dropdown>
-                    </div>
-                </div>
-            </div>
-        ));
-    };
-
-    const renderUserServices = () => {
-        return configsData.items
-            .map(config => (
+        alert(configsData.items)
+        return             configsData.items.map(config => (
             <div key={config.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
                     <div className="flex flex-col gap-1">
@@ -398,14 +302,14 @@ export default function Configs() {
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleInstruction(config.id);
+                                    toggledescription(config.id);
                                 }}
                                 className="flex items-center h-11 focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
                                 </svg>
-                                {openInstructionId === config.id ? "Скрыть описание" : "Показать описание"}
+                                {opendescriptionId === config.id ? "Скрыть описание" : "Показать описание"}
 
                             </button>
                         )}
@@ -432,7 +336,182 @@ export default function Configs() {
                     </div>
                 </div>
 
-                {openInstructionId === config.id && (
+                {opendescriptionId === config.id && (
+                    <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Описание сервиса:
+                        </h4>
+                        <div className="py-2 px-3 bg-gray-100 dark:bg-gray-700 rounded">
+                            <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-line break-normal">
+                                {config.description}
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        ));
+        // return configsData.items.map((service) => (
+        //     <div
+        //         key={service.id}
+        //         className="flex flex-col p-4 border-b border-gray-100 dark:border-gray-700 transition-colors"
+        //     >
+        //         <div className="flex items-center justify-between">
+        //             <div className="flex flex-col gap-2">
+        //                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
+        //                     {service.name}
+        //                 </h3>  
+        //                 <a
+        //                     href={service.url}
+        //                     target="_blank"
+        //                     rel="noopener noreferrer"
+        //                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+        //                     onClick={(e) => e.stopPropagation()}>
+        //                     {service.url}
+        //                 </a>
+        //                 <span className={`w-fit p-2 py-1 text-xs rounded-full ${
+        //                     service.available
+        //                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        //                         : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+        //                 }`}>
+        //                     {service.available ? 'Доступен' : 'Недоступен'}
+        //                 </span>
+        //             </div>
+        //             <div className="flex items-center gap-2">
+        //                 {service.admin && (
+        //                     <button
+        //                         onClick={(e) => {
+        //                             e.stopPropagation();
+        //                             handleOpenAdminPanel(service);
+        //                         }}
+        //                         className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
+        //                     >
+        //                         <svg
+        //                             xmlns="http://www.w3.org/2000/svg"
+        //                             className="h-5 w-5 flex-shrink-0 me-1"
+        //                             viewBox="0 0 20 20"
+        //                             fill="currentColor"
+        //                         >
+        //                             <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+        //                         </svg>
+        //                         Админ-панель
+        //                     </button>
+        //                 )}
+
+        //                 <Dropdown>
+        //                     <Dropdown.Trigger>
+        //                         <button
+        //                             type="button"
+        //                             className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300"
+        //                         >
+        //                             <svg
+        //                                 className="h-full w-auto text-center m-0"
+        //                                 xmlns="http://www.w3.org/2000/svg"
+        //                                 viewBox="0 0 20 20"
+        //                                 fill="currentColor"
+        //                             >
+        //                                 <path
+        //                                     d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"
+        //                                 />
+        //                             </svg>
+        //                         </button>
+        //                     </Dropdown.Trigger>
+
+        //                     <Dropdown.Content>
+        //                         <Dropdown.Link
+        //                             as="button"
+        //                             onClick={() => handleEditClick(service)}
+        //                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+        //                         >
+        //                             <svg
+        //                                 xmlns="http://www.w3.org/2000/svg"
+        //                                 className="h-5 w-5 mr-2"
+        //                                 fill="none"
+        //                                 viewBox="0 0 24 24"
+        //                                 stroke="currentColor"
+        //                             >
+        //                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        //                             </svg>
+        //                             Изменить
+        //                         </Dropdown.Link>
+
+        //                         <Dropdown.Link
+        //                             as="button"
+        //                             onClick={(e) => {
+        //                                 e.stopPropagation();
+        //                                 handleDelete(service);
+        //                             }}
+        //                             className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
+        //                         >
+        //                             <svg
+        //                                 xmlns="http://www.w3.org/2000/svg"
+        //                                 className="h-5 w-5 mr-2"
+        //                                 fill="none"
+        //                                 viewBox="0 0 24 24"
+        //                                 stroke="currentColor"
+        //                             >
+        //                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        //                             </svg>
+        //                             Удалить
+        //                         </Dropdown.Link>
+        //                     </Dropdown.Content>
+        //                 </Dropdown>
+        //             </div>
+        //         </div>
+        //     </div>
+        // ));
+    };
+
+    const renderUserServices = () => {
+        return configsData.items
+            .map(config => (
+            <div key={config.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
+                    <div className="flex flex-col gap-1">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
+                            {config.name}
+                        </h3>
+                    </div>
+
+                    <div className="flex gap-2">
+                        {config.description && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggledescription(config.id);
+                                }}
+                                className="flex items-center h-11 focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                                </svg>
+                                {opendescriptionId === config.id ? "Скрыть описание" : "Показать описание"}
+
+                            </button>
+                        )}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAdminPanel(config);
+                            }}
+                            className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 mr-1"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                                      clipRule="evenodd"/>
+                            </svg>
+                            Просмотр конфигурации
+
+                        </button>
+                    </div>
+                </div>
+
+                {opendescriptionId === config.id && (
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                         <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Описание сервиса:
@@ -461,7 +540,7 @@ export default function Configs() {
                             <div>
                                 <h1 className="text-2xl font-bold dark:text-gray-200">Список сервисов</h1>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Всего: {admin ? servicesData.total : servicesDataUser.total} сервисов
+                                    Всего: { configsData.total} сервисов
                                 </span>
                                 <div className="flex gap-2 mt-2 flex-wrap">
                                     {admin ?
@@ -526,23 +605,17 @@ export default function Configs() {
                             <Spiner />
                         ) : (
                             <>
-                                {(servicesData.items && servicesData.items.length>0) || (servicesDataUser.items && servicesDataUser.items.length>0) ? (
+                                {(configsData.items && configsData.items.length>0) ? (
                                     <div className="space-y-4">
-                                        {admin ? renderAdminServices() : renderUserServices()}
-                                        {admin ? 
-                                        <Pagination 
-                                            currentPage={servicesData.page}
-                                            totalPages={servicesData.total_pages}
-                                            onPageChange={handlePageChange}
-                                        /> : 
-                                        <Pagination 
-                                            currentPage={servicesDataUser.page}
-                                            totalPages={servicesDataUser.total_pages}
+                                        {renderUserServices()}
+                                        {<Pagination 
+                                            currentPage={configsData.page}
+                                            totalPages={configsData.total_pages}
                                             onPageChange={handlePageChange}
                                         />}
                                     </div>
                                 ) : (
-                                    <p className="text-gray-500 dark:text-gray-400">Нет сервисов для отображения</p>
+                                    <p className="text-gray-500 dark:text-gray-400">Нет конфигураций для отображения</p>
                                 )}
                             </>
                         )}
@@ -556,13 +629,13 @@ export default function Configs() {
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
                         <div className="p-6">
                             <h2 className="text-xl font-bold mb-4 dark:text-gray-200">
-                                {isCreating ? 'Добавить новый сервис' : 'Редактировать сервис'}
+                                {isCreating ? 'Добавить новый экземпляр сервиса' : 'Редактировать экземпляр сервиса'}
                             </h2>
 
                             <form onSubmit={handleSubmit(onSubmit)}>
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Название сервиса
+                                        Название экземпляра
                                     </label>
                                     <input
                                         type="text"
@@ -576,31 +649,11 @@ export default function Configs() {
 
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        URL сервиса
-                                    </label>
-                                    <input
-                                        type="text"
-                                        {...register('url', {
-                                            required: 'Обязательное поле',
-                                            pattern: {
-                                                value: /^(https?:\/\/)?(www\.)?(([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}|(\d{1,3}\.){3}\d{1,3})(:\d{1,5})?(\/[^\s?#]*)?(\?[^#\s]*)?(#\S*)?$/i,
-                                                message: "Не является адресом сервиса"
-                                            }
-                                        })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    />
-                                    {errors.url && (
-                                        <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.url.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Инструкция прохождения
+                                        Описание
                                     </label>
                                     <textarea
                                         type="text"
-                                        {...register('instruction')}
+                                        {...register('description')}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
                                     {errors.name && (
@@ -608,28 +661,25 @@ export default function Configs() {
                                     )}
                                 </div>
 
-                                <div className="mb-4 flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="available-checkbox"
-                                        {...register('available')}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
-                                    />
-                                    <label htmlFor="available-checkbox" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                                        Доступен
-                                    </label>
-                                </div>
-
-                                <div className="mb-4 flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="admin-checkbox"
-                                        {...register('admin')}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
-                                    />
-                                    <label htmlFor="admin-checkbox" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                                        Есть админ-панель
-                                    </label>
+                                <div>
+                                        <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                                            Сервис:
+                                        </label>
+                                        {loadingServices ? (
+                                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                        ) : (
+                                            <select    
+                                                {...register('service')}                                                                   
+                                                className="w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                                required
+                                            >
+                                                {services.map((service) => (
+                                                    <option key={service.id} value={service.id}>
+                                                        {service.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
                                 </div>
 
                                 <div className="flex justify-end space-x-3">

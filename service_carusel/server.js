@@ -2,9 +2,10 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { saveConfig, checkIdExists } = require('./db');
 const app = express();
 const PORT = 3000;
-
+const db = require('./db');
 const IMAGES_DIR = path.join(__dirname, 'public/images');
 
 // Настройки Multer
@@ -26,11 +27,88 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/admin.html'));
 });
 
+app.get('/config', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/config.html'));
+});
+
 app.use('/images', express.static(IMAGES_DIR, {
     setHeaders: (res) => {
         res.set('Cache-Control', 'no-store');
     }
 }));
+
+// Эндпоинт для сохранения конфигурации
+app.post('/api/config/save', async (req, res) => {
+    try {
+        const { platform_id, config_text } = req.body;
+
+        // Валидация входных данных
+        if (!platform_id || !config_text) {
+            return res.status(400).json({
+                success: false,
+                error: 'Необходимы platform_id и config_text'
+            });
+        }
+
+        // Сохраняем или обновляем конфигурацию
+        // Используем UPSERT (INSERT ... ON CONFLICT ...)
+        const saveQuery = `
+            INSERT INTO schema_comics.configs (id, test) 
+            VALUES ($1, $2)
+            ON CONFLICT (id) 
+            DO UPDATE SET 
+                test = EXCLUDED.test
+            RETURNING *
+        `;
+
+        const result = await db.query(saveQuery, [platform_id, config_text]);
+
+        res.json({
+            success: true,
+            message: 'Конфигурация сохранена',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Ошибка сохранения конфигурации:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Внутренняя ошибка сервера',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Эндпоинт для получения конфигурации
+app.get('/api/config/:platform_id', async (req, res) => {
+    try {
+        const { platform_id } = req.params;
+        
+        const result = await db.query(
+            'SELECT * FROM schema_comics.configs WHERE id = $1',
+            [platform_id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Конфигурация не найдена'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Ошибка получения конфигурации:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Внутренняя ошибка сервера'
+        });
+    }
+});
 
 // Получить список изображений
 app.get('/api/images', (req, res) => {

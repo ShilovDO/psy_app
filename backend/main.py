@@ -23,7 +23,8 @@ from services import (
     delete_service,
     create_config,
     delete_config,
-    all_config
+    all_config,
+    configurable_service
 )
 from routes import (
     create_route,
@@ -386,11 +387,16 @@ async def addService(del_config: ID):
     return config
 
 @app.get("/all_config")
-async def allConfig(sort: int, field: str, direction: str, page: int = 1, per_page: int = 10):
+async def allConfig(request: Request, sort: int, field: str, direction: str, page: int = 1, per_page: int = 10):
     db = SessionLocal()
-    print('ok')
-    result = await all_config(db, sort, field, direction, page, per_page)
-    print('very ok')
+    result = await all_config(request, db, sort, field, direction, page, per_page)
+    db.close()
+    return result
+
+@app.get("/configurable_service")
+async def allConfig(request: Request):
+    db = SessionLocal()
+    result = await configurable_service(db)
     db.close()
     return result
 
