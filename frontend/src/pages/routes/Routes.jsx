@@ -344,7 +344,7 @@ export default function AppRoutes() {
                                                   className="flex items-center justify-between py-2 px-3 bg-gray-100 dark:bg-gray-600 rounded"
                                               >
                                 <span className="text-gray-800 dark:text-gray-200">
-                                    №{station.number}: {station.service_name}
+                                    №{station.number}: {station.config_name}
                                 </span>
                                                 <span
                                                     className="text-sm text-gray-600 dark:text-gray-300">

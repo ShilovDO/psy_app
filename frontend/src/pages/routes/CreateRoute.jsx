@@ -35,9 +35,9 @@ export default function CreateRoute() {
         const fetchServices = async () => {
             try {
                 setLoadingServices(true);
-                const response = await api.getAvailableServices(1, Number.MAX_SAFE_INTEGER, );
-                if (response?.data?.items) {
-                    setServices(response.data.items);
+                const response = await api.getAllConfigForRoute();
+                if (response?.data) {
+                    setServices(response.data);
                 }
             } catch (error) {
                 toast.error("Не удалось загрузить список сервисов");
@@ -54,9 +54,10 @@ export default function CreateRoute() {
     const addStation = () => {
         setStations([...stations, {
             number: stations.length + 1,
-            service: services.length > 0 ? services[0].id : "",
+            config: services.length > 0 ? services[0].id : "",
             next: stations.length + 2,
-            description: ""
+            description: "",
+            entry: false
         }]);
     };
 
@@ -104,9 +105,10 @@ export default function CreateRoute() {
                     let data_stations = {
                         id: station.id,
                         number: station.number,
-                        service: station.service,
+                        config: station.config,
                         next: station.number === stations.length ? 0 : station.number + 1,
-                        description: station.description
+                        description: station.description,
+                        entry: false
                     }
                     alert(data_stations.id)
                     if (data_stations.id !== undefined)
@@ -118,10 +120,11 @@ export default function CreateRoute() {
                         data_stations = {
                             route_id: routeId,
                             number: station.number,
-                            service: station.service,
+                            config: station.config,
                             next: station.number === stations.length ? 0 : station.number + 1,
                             entry: false,
-                            description: station.description
+                            description: station.description,
+                            entry: false
                         }
                         await api.createStation(data_stations);
                     }
@@ -140,7 +143,7 @@ export default function CreateRoute() {
                     const data_stations = {
                         route_id: route_id,
                         number: station.number,
-                        service: station.service,
+                        config: station.config,
                         next: station.number === stations.length ? 0 : station.number + 1,
                         entry: false,
                         description: station.description
@@ -241,14 +244,14 @@ export default function CreateRoute() {
                                                     <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                                                 ) : (
                                                     <select
-                                                        value={station.service}
-                                                        onChange={(e) => updateStation(index, 'service', e.target.value)}
+                                                        value={station.config}
+                                                        onChange={(e) => updateStation(index, 'config', e.target.value)}
                                                         className="w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                                         required
                                                     >
-                                                        {services.map((service) => (
-                                                            <option key={service.id} value={service.id}>
-                                                                {service.name}
+                                                        {services.map((config) => (
+                                                            <option key={config.id} value={config.id}>
+                                                                {config.name}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -318,9 +321,9 @@ export default function CreateRoute() {
                                     <div className="ml-4 p-3 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                                         <p className="font-medium dark:text-gray-200">
                                             {(() => {
-                                                for (const service of services) {
-                                                    if (service.id == station.service) {
-                                                        return service.name;
+                                                for (const config of services) {
+                                                    if (config.id == station.config) {
+                                                        return config.name;
                                                     }
                                                 }
                                                 return "Неизвестный сервис";

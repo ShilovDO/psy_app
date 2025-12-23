@@ -8,13 +8,20 @@ const PORT = 3000;
 const db = require('./db');
 const IMAGES_DIR = path.join(__dirname, 'public/images');
 
+// server.js
+let currentResult = 0; // хранит текущее значение счётчика
+
+
 // Настройки Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, IMAGES_DIR),
     filename: (req, file, cb) => cb(null, 'temp_' + Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
+const cors = require('cors');
 
+
+app.use(cors()); // теперь все запросы с любого домена будут разрешены
 app.use(express.static('public'));
 app.use(express.json());
 
@@ -36,6 +43,54 @@ app.use('/images', express.static(IMAGES_DIR, {
         res.set('Cache-Control', 'no-store');
     }
 }));
+
+// Этот запрос вызывается с фронта или другого приложения
+app.post('/api/set_result', (req, res) => {
+    const { result } = req.body;
+
+    if (result === undefined) {
+        return res.status(400).send('Нет параметра result');
+    }
+
+    currentResult = result; // обновляем глобальную переменную
+    res.sendStatus(200);
+});
+
+
+// Запись результата при закрытии приложения (POST)
+app.post('/api/result_save', async (req, res) => {
+    try {
+        const {
+            id,
+            user,
+            station,
+            route,
+            config,
+            date
+        } = req.body; // теперь данные из тела запроса
+
+        if (!id || !user || !station || !route || !config || !date) {
+            return res.status(400).send('Недостаточно параметров');
+        }
+
+        await db.query(
+            `
+            INSERT INTO schema_comics.results
+            (id, "user", station, route, config, date_time, result)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `,
+            [id, user, station, route, config, date, currentResult]
+        );
+
+        res.sendStatus(200);
+
+    } catch (e) {
+        console.error('Ошибка записи результата:', e);
+        res.sendStatus(500);
+    }
+});
+
+
 
 // Эндпоинт для сохранения конфигурации
 app.post('/api/config/save', async (req, res) => {

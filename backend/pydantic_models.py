@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, TypeVar, Generic
 from models import Routes, Configs
+from datetime import datetime
 
 class Token(BaseModel):
     access_token: str
@@ -48,6 +49,12 @@ class Service(BaseModel):
     admin: bool
     instruction: str
 
+class NewResult(BaseModel):
+    station: int
+    config: int
+    route: int
+    date_time: datetime
+
 class NewRoute(BaseModel):
     name: str
 
@@ -72,6 +79,7 @@ class ChangeStation(BaseModel):
     next: int
     config: int
     description: str
+    entry: bool
 
 class NewConfig(BaseModel):
     name: str

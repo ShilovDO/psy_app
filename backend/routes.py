@@ -125,8 +125,8 @@ async def change_station(station: ChangeStation, db):
             existing_station.config = station.config
         if station.description is not None:
             existing_station.description = station.description
-
-        existing_station.entry = False
+        if station.entry is not None:
+            existing_station.entry = station.entry
 
         db.commit()
         return existing_station
@@ -180,14 +180,20 @@ async def all_station(route_id: int, db):
 
 
     result = []
-    for station, service_name, url, available in stations_with_services:
-        station_dict = {
-            **station.__dict__,
+    for station, config_name, config_description, config_id, service_name, url, available in stations_with_services:
+        station_dict = station.__dict__.copy()
+        
+        # Добавляем дополнительные поля
+        station_dict.update({
+            "config_name": config_name,
+            "config_description": config_description,
+            "config_id": config_id,
             "service_name": service_name,
             "url": url,
             "available": available,
-        }
+        })
 
+        # Удаляем внутренний атрибут SQLAlchemy
         station_dict.pop('_sa_instance_state', None)
         result.append(station_dict)
 

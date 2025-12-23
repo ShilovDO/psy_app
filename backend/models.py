@@ -1,7 +1,9 @@
 from typing import List
+from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, Text
+from sqlalchemy import BigInteger, Boolean, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, Text, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 
 class Base(DeclarativeBase):
     pass
@@ -92,3 +94,26 @@ class Configs(Base):
     users: Mapped['Users'] = relationship('Users', back_populates='configs')
     stations: Mapped[List['Stations']] = relationship("Stations", back_populates="configs")
     services: Mapped['Services'] = relationship('Services', back_populates='configs')
+
+
+class Results(Base):
+    __tablename__ = 'results'
+    __table_args__ = (
+        ForeignKeyConstraint(['user'], ['users.id'], name='results_user_fk'),
+        ForeignKeyConstraint(['station'], ['stations.id'], name='results_station_fk'),
+        ForeignKeyConstraint(['config'], ['configs.id'], name='results_config_fk'),
+        ForeignKeyConstraint(['route'], ['routes.id'], name='results_route_fk'),
+        PrimaryKeyConstraint('id', name='results_pkey'),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True)
+    user: Mapped[int] = mapped_column(BigInteger)
+    station: Mapped[int] = mapped_column(BigInteger)
+    config: Mapped[int] = mapped_column(BigInteger)
+    route: Mapped[int] = mapped_column(BigInteger)
+    date_time: Mapped[datetime] = mapped_column(DateTime)
+
+    user_rel: Mapped['Users'] = relationship('Users')
+    station_rel: Mapped['Stations'] = relationship('Stations')
+    config_rel: Mapped['Configs'] = relationship('Configs')
+    route_rel: Mapped['Routes'] = relationship('Routes')

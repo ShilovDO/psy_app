@@ -189,4 +189,14 @@ export const api = {
     createConfig: async (data) => {
         return apiClient.post('/add_config', data);
     },
+    getAllConfigForRoute: async () => {
+        return apiClient.get('/all_config_for_route');
+    },
+    createResult: async (data) => {
+        return apiClient.post('/create_result', data);
+    },
+
+    createResult: async (data) => {
+        return apiClient.post('/create_result', data);
+    },
 };

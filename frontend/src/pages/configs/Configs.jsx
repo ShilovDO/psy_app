@@ -174,9 +174,17 @@ export default function Configs() {
     };
 
     const handleOpenAdminPanel = (service) => {
+        console.info('Тест URL:')
+        console.info(service)
         const baseUrl = service.url.replace(/\/$/, '');
-        if (admin) setAdminPanelUrl(`${baseUrl}/admin`);
-        else setAdminPanelUrl(`${baseUrl}`);
+        setAdminPanelUrl(`${baseUrl}/config?id=${service.id}`)
+    };
+
+    const handleOpenViewPanel = (service) => {
+        console.info('Тест URL:')
+        console.info(service)
+        const baseUrl = service.url.replace(/\/$/, '');
+        setAdminPanelUrl(`${baseUrl}/?id=${service.id}`)
     };
 
     const closeAdminPanel = () => {
@@ -196,7 +204,7 @@ export default function Configs() {
                 response = await api.createConfig(dataToCreate);
                 toast.success('Сервис успешно создан');
 
-                setIsServiceModalOpen(true);
+                handleOpenAdminPanel(response.data);
 
             } else {
                 const dataToSend = {
@@ -210,6 +218,9 @@ export default function Configs() {
                 response = await api.updateService(dataToSend);
                 toast.success('Сервис успешно обновлен');
             }
+
+            setIsCreating(false);
+            setIsServiceModalOpen(false);
 
             if (response.data) {
                 fetchConfigs(currentPage, perPage, sortParam);
@@ -288,7 +299,7 @@ export default function Configs() {
 
     const renderAdminServices = () => {
         alert(configsData.items)
-        return             configsData.items.map(config => (
+        return configsData.items.map(config => (
             <div key={config.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
                     <div className="flex flex-col gap-1">
@@ -317,6 +328,26 @@ export default function Configs() {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenAdminPanel(config);
+                            }}
+                            className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 mr-1"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                                      clipRule="evenodd"/>
+                            </svg>
+                            Просмотр конфигурации
+
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenViewPanel(config);
                             }}
                             className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
                         >
@@ -462,6 +493,8 @@ export default function Configs() {
     };
 
     const renderUserServices = () => {
+        console.info('configData: ')
+        console.info(configsData)
         return configsData.items
             .map(config => (
             <div key={config.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
@@ -492,6 +525,24 @@ export default function Configs() {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenAdminPanel(config);
+                            }}
+                            className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-5 w-5 flex-shrink-0 me-1"
+                                                        viewBox="0 0 20 20"
+                                                        fill="currentColor"
+                                                    >
+                                                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                                                    </svg>
+                            Просмотр конфигурации
+
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenViewPanel(config);
                             }}
                             className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
                         >
@@ -538,7 +589,7 @@ export default function Configs() {
                     <div className="p-6 text-gray-900">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h1 className="text-2xl font-bold dark:text-gray-200">Список сервисов</h1>
+                                <h1 className="text-2xl font-bold dark:text-gray-200">Список экземпляров сервисов</h1>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
                                     Всего: { configsData.total} сервисов
                                 </span>
@@ -595,7 +646,7 @@ export default function Configs() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
                                     <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
-                                        Добавить сервис
+                                        Добавить экземпляр сервиса
                                     </span>
                                 </button>
                             )}

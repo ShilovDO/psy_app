@@ -19,7 +19,7 @@ export default function RoutePlayer() {
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [showStationModal, setShowStationModal] = useState(false);
     const [showUnavailableModal, setShowUnavailableModal] = useState(false);
-    const iframeRef = useRef(null);
+    // const iframeRef = useRef(null);
 
 
     // Загрузка данных маршрута
@@ -67,33 +67,62 @@ export default function RoutePlayer() {
     }, [routeId, navigate]);
 
     
-    useEffect(() => {
-        if (showStationModal && iframeRef.current) {
-            iframeRef.current.contentWindow.postMessage(
-                { type: "MODAL_OPENED", station: currentStation },
-                "*"
-            );
-        }
-    }, [showStationModal]);
+    // useEffect(() => {
+    //     if (showStationModal && iframeRef.current) {
+    //         iframeRef.current.contentWindow.postMessage(
+    //             { type: "MODAL_OPENED", station: currentStation },
+    //             "*"
+    //         );
+    //     }
+    // }, [showStationModal]);
 
     const currentStation = stations[currentStationIndex];
 
     // Обработчик перехода к следующей станции
     const handleNextStation = async () => {
         try {
+            const datetime = new Date().toISOString();
+
+            // Записываем результат
+            const result = await api.createResult({
+                    station: currentStation.id,
+                    config: currentStation.config_id,
+                    route: currentStation.route,
+                    date_time: datetime
+                });
+            
+            const response = await fetch(
+                 `${currentStation.url}/api/result_save`,
+                {
+                    method: "POST",
+                    headers: {
+                    "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        id: result.data.id,
+                        user: result.data.user,
+                        station: currentStation.id,
+                        route: currentStation.route,
+                        config: currentStation.config_id,
+                        date: datetime
+                    }),
+                }
+                );
+
+            
             if (currentStationIndex < stations.length - 1) {
                 setIsTransitioning(true);
 
                 // Обновляем статус станции через бекенд
                 await api.changeStation({
-                    route_id: currentStation.route,
+                    id: currentStation.id,
                     number: currentStation.number,
                     entry: true,
                     next: currentStation.next,
-                    service: currentStation.service,
+                    config: currentStation.config_id,
                     description: currentStation.description || ""
                 });
-
+                
                 // Обновляем локальное состояние
                 const updatedStations = [...stations];
                 updatedStations[currentStationIndex].entry = true;
@@ -102,6 +131,8 @@ export default function RoutePlayer() {
                 // Добавляем текущую станцию в список завершенных
                 setCompletedStations(prev => [...prev, stations[currentStationIndex]]);
 
+             
+    
                 // Задержка для анимации перед переходом
                 setTimeout(() => {
                     setCurrentStationIndex(prev => prev + 1);
@@ -115,11 +146,11 @@ export default function RoutePlayer() {
             } else {
                 // Маршрут завершен - обновляем последнюю станцию
                 await api.changeStation({
-                    route_id: currentStation.route,
+                    id: currentStation.id,
                     number: currentStation.number,
                     entry: true,
                     next: currentStation.next,
-                    service: currentStation.service,
+                    config: currentStation.config_id,
                     description: currentStation.description || ""
                 });
 
@@ -144,11 +175,11 @@ export default function RoutePlayer() {
             
             // Помечаем станцию как пройденную
             await api.changeStation({
-                route_id: currentStation.route,
+                id: currentStation.id,
                 number: currentStation.number,
                 entry: true,
                 next: currentStation.next,
-                service: currentStation.service,
+                config: currentStation.config_id,
                 description: currentStation.description || ""
             });
 
@@ -178,11 +209,11 @@ export default function RoutePlayer() {
             // Сбрасываем все станции в непройденные через бекенд
             for (const station of stations) {
                 await api.changeStation({
-                    route_id: station.route,
+                    id: station.id,
                     number: station.number,
                     entry: false,
                     next: station.next,
-                    service: station.service,
+                    config: station.config_id,
                     description: currentStation.description || ""
                 });
             }
@@ -299,7 +330,7 @@ export default function RoutePlayer() {
                                             )}
                                         </motion.div>
                                         <span className="text-xs mt-1 text-gray-500 dark:text-gray-400 truncate max-w-20">
-                                            {station.service_name}
+                                            {station.config_name}
                                         </span>
                                     </div>
                                 ))}
@@ -370,7 +401,7 @@ export default function RoutePlayer() {
                     ) : (
                         <div className="bg-blue-50 rounded-lg p-6 mb-6 dark:bg-gray-700">
                             <h2 className="text-xl font-semibold mb-2">
-                                <span className="text-blue-600 dark:text-blue-400">Станция {currentStation.number}:</span> {currentStation.service_name}
+                                <span className="text-blue-600 dark:text-blue-400">Станция {currentStation.number}:</span> {currentStation.config_name}
                             </h2>
                             <p className="text-gray-700 dark:text-gray-300">
                                 Пройдите станцию, нажав кнопку "Пройти станцию" выше. После выполнения задания нажмите "Следующая станция".
@@ -415,7 +446,7 @@ export default function RoutePlayer() {
                         >
                             <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
                                 <h2 className="text-lg font-semibold dark:text-white">
-                                    Станция {currentStation.number}: {currentStation.service_name}
+                                    Станция {currentStation.number}: {currentStation.config_name}
                                 </h2>
                                 <button
                                     onClick={() => setShowStationModal(false)}
@@ -428,8 +459,7 @@ export default function RoutePlayer() {
                             </div>
                             <div className="flex-1 relative">
                                 <iframe
-                                    ref={iframeRef}
-                                    src={currentStation.url}
+                                    src ={`${currentStation.url}?id=${currentStation.config_id}`}
                                     title={`Станция ${currentStation.number}`}
                                     className="absolute inset-0 w-full h-full border-0"
                                     allow="fullscreen"
@@ -555,7 +585,7 @@ export default function RoutePlayer() {
                                 </h3>
                                 <div className="mt-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-300">
-                                        Станция "{currentStation?.service_name}" в настоящее время находится на техническом обслуживании или временно недоступна.
+                                        Станция "{currentStation?.config_name}" в настоящее время находится на техническом обслуживании или временно недоступна.
                                     </p>
                                     <p className="text-sm text-gray-500 dark:text-gray-300 mt-2">
                                         Вы можете пропустить эту станцию и перейти к следующей.

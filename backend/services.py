@@ -11,7 +11,7 @@ from fastapi import Response  # Импортируем Response
 from models import Services, Configs
 
 
-async def create_service(service: NewService, db):
+async def create_service(service: NewService, request: Request, db):
     new_service = Services(
         name=service.name,
         url=service.url,
@@ -22,6 +22,17 @@ async def create_service(service: NewService, db):
     db.add(new_service)
     db.commit()
     db.refresh(new_service)
+    
+    if not service.admin:
+        config = Configs(
+            name=service.name,
+            description=service.instruction,
+            owner = None,
+            service=new_service.id
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
     return new_service
     
 async def change_service(service: Service, db):
@@ -105,7 +116,21 @@ async def create_config(config: NewConfig, request: Request, db):
     db.add(new_config)
     db.commit()
     db.refresh(new_config)
-    return new_config
+    return_config = db.query(Configs, Services.url.label('url')).join(Services, Configs.service == Services.id).filter(Configs.id == new_config.id).all()
+
+    items = []
+ 
+    for config, url in return_config:
+        items = {
+            "id": config.id,
+            "name": config.name,
+            "service": config.service,
+            "owner": config.owner,
+            "description": config.description,
+            "url": url
+        }
+   
+    return new_config, items
 
 async def delete_config(config_id: ID, db):
     check_config = db.query(Configs).filter(Configs.id == config_id.id).first()
@@ -171,6 +196,7 @@ async def all_config(request: Request, db, sort, field, direction, page: int = 1
             "id": config.id,
             "name": config.name,
             "service": config.service,
+            "description": config.description,
             "owner": config.owner,
             "url": url
         })
@@ -183,7 +209,10 @@ async def all_config(request: Request, db, sort, field, direction, page: int = 1
         "total_pages": total_pages
     }
 
-
+async def all_config_for_route(request: Request, db):
+    user_id = request.state.user.id
+    configs = db.query(Configs).filter((Configs.owner == user_id) | (Configs.owner == None)).all()
+    return configs
 
 async def available_service(db, field, direction, page: int = 1, per_page: int = 10):
     # Вычисляем смещение

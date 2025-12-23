@@ -24,7 +24,8 @@ from services import (
     create_config,
     delete_config,
     all_config,
-    configurable_service
+    configurable_service,
+    all_config_for_route
 )
 from routes import (
     create_route,
@@ -37,12 +38,16 @@ from routes import (
     change_route, 
     get_route
 )
+from results import (
+    create_result
+)
+create_result
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from typing import Annotated
 from pydantic import BaseModel
 from pydantic_models import (UserLogin, TokenData, Token, UserRegistration, NewService, Service, ID, NewRoute, 
-    NewStation, Route, FullUser, User, ChangeStation, ChangeRoute, NewConfig)
+    NewStation, Route, FullUser, User, ChangeStation, ChangeRoute, NewConfig, NewResult)
 from fastapi import APIRouter, Depends
 from fastapi import Response
 from middleware.middleware import auth_middleware
@@ -319,7 +324,7 @@ async def changeUsers(user: FullUser):
     return new_user
 
 @app.post("/delete_user")
-async def addService(user_id: ID, request: Request):
+async def deleteUser(user_id: ID, request: Request):
     db = SessionLocal()
     user = await delete_user(user_id, request, db)
     db.commit()
@@ -327,9 +332,9 @@ async def addService(user_id: ID, request: Request):
     return user
 
 @app.post("/add_service")
-async def addService(new_service: NewService):
+async def addService(new_service: NewService, request: Request):
     db = SessionLocal()
-    service = await create_service(new_service, db)
+    service = await create_service(new_service, request, db)
     db.add(service)
     db.commit()
     db.refresh(service)
@@ -371,12 +376,12 @@ async def allService(field, direction, page: int = 1, per_page: int = 10):
 async def addService(new_config: NewConfig, request: Request):
     db = SessionLocal()
     print(new_config)
-    config = await create_config(new_config, request, db)
+    config, config_url = await create_config(new_config, request, db)
     db.add(config)
     db.commit()
     db.refresh(config)
     db.close()
-    return config
+    return config_url
 
 @app.post("/delete_config")
 async def addService(del_config: ID):
@@ -397,6 +402,13 @@ async def allConfig(request: Request, sort: int, field: str, direction: str, pag
 async def allConfig(request: Request):
     db = SessionLocal()
     result = await configurable_service(db)
+    db.close()
+    return result
+
+@app.get("/all_config_for_route")
+async def allConfig(request: Request):
+    db = SessionLocal()
+    result = await all_config_for_route(request, db)
     db.close()
     return result
 
@@ -476,3 +488,13 @@ async def allStation(route_id: int):
     services = await all_station(route_id, db)
     db.close()
     return services
+
+@app.post("/create_result")
+async def createResult(result: NewResult, request: Request):
+    db = SessionLocal()
+    result = await create_result(result, request, db)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.close()
+    return result
