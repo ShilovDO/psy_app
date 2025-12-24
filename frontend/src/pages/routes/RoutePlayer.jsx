@@ -81,8 +81,10 @@ export default function RoutePlayer() {
     // Обработчик перехода к следующей станции
     const handleNextStation = async () => {
         try {
+            console.info("Объект current station");
+            console.info(currentStation)
             const datetime = new Date().toISOString();
-
+            if (currentStation.admin){
             // Записываем результат
             const result = await api.createResult({
                     station: currentStation.id,
@@ -108,7 +110,7 @@ export default function RoutePlayer() {
                     }),
                 }
                 );
-
+            }
             
             if (currentStationIndex < stations.length - 1) {
                 setIsTransitioning(true);

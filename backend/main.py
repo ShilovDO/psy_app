@@ -25,7 +25,7 @@ from services import (
     delete_config,
     all_config,
     configurable_service,
-    all_config_for_route
+    all_config_for_route, all_config_configurable
 )
 from routes import (
     create_route,
@@ -39,9 +39,9 @@ from routes import (
     get_route
 )
 from results import (
-    create_result
+    create_result,
+    all_result
 )
-create_result
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from typing import Annotated
@@ -412,6 +412,14 @@ async def allConfig(request: Request):
     db.close()
     return result
 
+@app.get("/all_configs_configurable")
+async def allConfigsConfigurable(request: Request):
+    db = SessionLocal()
+    result = await all_config_configurable(request, db)
+    db.close()
+    return result
+
+
 @app.post("/add_route")
 async def addRoute(new_route: NewRoute, request: Request):
     db = SessionLocal()
@@ -496,5 +504,12 @@ async def createResult(result: NewResult, request: Request):
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.close()
+    return result
+
+@app.get("/all_result")
+async def allConfig(field: str, direction: str, config: int = 0, route: int = 0, user: int = 0, page: int = 1, per_page: int = 10):
+    db = SessionLocal()
+    result = await all_result(field, config, route, user, direction, db, page, per_page)
     db.close()
     return result

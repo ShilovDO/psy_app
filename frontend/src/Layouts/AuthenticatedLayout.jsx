@@ -123,10 +123,31 @@ export default function AuthenticatedLayout({header}) {
                         active={location.pathname === '/configs'}
                         className="inline-flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
-                        </svg>
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 flex-shrink-0 me-1"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+>
+    <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clipRule="evenodd" />
+    <path d="M6 12a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H2h2a2 2 0 002-2v-2z" />
+</svg>
                         Конфигурации
+                    </NavLink>
+                    <NavLink
+                        to='/results'
+                        active={location.pathname === '/results'}
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                       <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 flex-shrink-0 me-1"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+>
+    <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+</svg>
+                        Результаты
                     </NavLink>
                 </div>
             </div>

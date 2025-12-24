@@ -214,6 +214,11 @@ async def all_config_for_route(request: Request, db):
     configs = db.query(Configs).filter((Configs.owner == user_id) | (Configs.owner == None)).all()
     return configs
 
+async def all_config_configurable(request: Request, db):
+    user_id = request.state.user.id
+    configs = db.query(Configs).filter(Configs.owner == user_id).all()
+    return configs
+
 async def available_service(db, field, direction, page: int = 1, per_page: int = 10):
     # Вычисляем смещение
     offset = (page - 1) * per_page

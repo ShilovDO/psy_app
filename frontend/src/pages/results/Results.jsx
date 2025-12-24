@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import {useSearchParams} from "react-router-dom";
+import { useMemo } from 'react';
 
-
-export default function Configs() {
+export default function Results() {
     const [loadingServices, setLoadingServices] = useState(false);
     const [servicesData, setServicesData] = useState({
         items: [],
@@ -50,9 +50,11 @@ export default function Configs() {
         { value: 50, label: "50 записей" }
     ];
 
+
+
     const SORT_OPTIONS_ADMIN = [
-        {value: "name_desc", label: "По убыванию названия"},
-        {value: "name_asc", label: "По возрастанию названия"},
+        // {value: "name_desc", label: "По убыванию названия"},
+        // {value: "name_asc", label: "По возрастанию названия"},
         // {value: "available_desc", label: "Сначала доступные"},
         // {value: "available_asc", label: "Сначала недоступные"},
         {value: "id_desc", label: "Сначала новые"},
@@ -74,15 +76,15 @@ export default function Configs() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [sortParam, setSortParam] = useState((location.pathname).startsWith("/admin") ? localStorage.getItem('service_sort_admin') || 'name_asc' : localStorage.getItem('service_sort') || 'name_asc');
     const [perPage, setPerPage] = useState((location.pathname).startsWith("/admin") ? parseInt(localStorage.getItem('services_per_page_admin') || 10) : (parseInt(localStorage.getItem('services_per_page'))|| 10));
-    const [serviceParam, setServiceParam] = useState(localStorage.getItem('service_filter') || '0');
+    const [userParam, setUserParam] = useState(localStorage.getItem('user_filter') || '0');
+    const [configParam, setConfigParam] = useState(localStorage.getItem('config_filter') || '0');
+    const [routeParam, setRouteParam] = useState(localStorage.getItem('route_filter') || '0');
     const currentPage = parseInt(searchParams.get("page")) || 1;
     const [services, setServices] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [routes, setRoutes] = useState([]);
+    const [configs, setConfigs] = useState([]);
     
-    const updateStation = (index, field, value) => {
-        const updatedStations = [...stations];
-        updatedStations[index][field] = value;
-        setStations(updatedStations);
-    };
 
     const {
         register,
@@ -101,6 +103,7 @@ export default function Configs() {
         },
     });
 
+
     const fetchServices = async () => {
         try {
             setLoadingServices(true);
@@ -111,6 +114,54 @@ export default function Configs() {
         } catch (error) {
             toast.error("Не удалось загрузить список сервисов");
             console.error("Ошибка загрузки сервисов:", error);
+        } finally {
+            setLoadingServices(false);
+        }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            setLoadingServices(true);
+            const response = await api.getUsers();
+            if (response?.data?.items) {
+                setUsers([{id: 0, username: "Пользователь", mail: "", admin: false}, ...response.data.items]);
+                
+            }
+        } catch (error) {
+            toast.error("Не удалось загрузить список пользователей");
+            console.error("Ошибка загрузки пользователей:", error);
+        } finally {
+            setLoadingServices(false);
+        }
+    };
+
+    const fetchConfigsToSort = async () => {
+        try {
+            setLoadingServices(true);
+            const response = await api.getAllConfigConfigurable();
+            if (response?.data) {
+                setConfigs([{id: 0, name: "Конфигурация", description: "", service: 0, owner: 0}, ...response.data]);
+                
+            }
+        } catch (error) {
+            toast.error("Не удалось загрузить список конфигураций");
+            console.error("Ошибка загрузки конфигураций:", error);
+        } finally {
+            setLoadingServices(false);
+        }
+    };
+
+    const fetchRoutes = async () => {
+        try {
+            setLoadingServices(true);
+            const response = await api.getAllRoutes();
+            if (response?.data?.items) {
+                setRoutes([{id: 0, name: "Маршрут", owner: 0}, ...response.data?.items]);
+                
+            }
+        } catch (error) {
+            toast.error("Не удалось загрузить список маршрутов");
+            console.error("Ошибка загрузки маршрутов:", error);
         } finally {
             setLoadingServices(false);
         }
@@ -136,11 +187,12 @@ export default function Configs() {
     //     }
     // };
 
-    const fetchConfigs = async (page = 1, per_page = perPage, sort = sortParam, serviceParam=0) => {
+    const fetchConfigs = async (page = 1, per_page = perPage, sort = sortParam, user=0, config=0, route=0) => {
         try {
+            if (user == NaN) user=0;
             setLoading(true);
             const [field, direction] = sort.split("_");
-                const responseUser = await api.getConfigs(page, per_page, field, direction, serviceParam);
+                const responseUser = await api.getResults(page, per_page, field, direction, user, config, route);
                 setConfigsData(responseUser.data)               
       
         } catch (error) {
@@ -184,7 +236,7 @@ export default function Configs() {
         console.info('Тест URL:')
         console.info(service)
         const baseUrl = service.url.replace(/\/$/, '');
-        setAdminPanelUrl(`${baseUrl}/?id=${service.id}`)
+        setAdminPanelUrl(`${baseUrl}/result/?id=${service.id}`)
     };
 
     const closeAdminPanel = () => {
@@ -264,6 +316,27 @@ export default function Configs() {
         setSearchParams({page: 1});
     };
 
+    
+    const handleUserChange = (e) => {
+        const newUser = parseInt(e.target.value);
+        setUserParam(newUser);
+        localStorage.setItem('user_filter', newUser.toString());
+        setSearchParams({page: 1});
+    };
+
+    const handleConfigChange = (e) => {
+        const newConfig = parseInt(e.target.value);
+        setConfigParam(newConfig);
+        localStorage.setItem('config_filter', newConfig.toString());
+        setSearchParams({page: 1});
+    };
+    const handleRouteChange = (e) => {
+        const newRoute = parseInt(e.target.value);
+        setRouteParam(newRoute);
+        localStorage.setItem('route_filter', newRoute.toString());
+        setSearchParams({page: 1});
+    };
+
     const loadServiceHandler = (e) => {
         if (admin) {
             e.target.contentWindow.postMessage('secret_key', '*');
@@ -272,8 +345,11 @@ export default function Configs() {
 
     useEffect(() => {
         setTimeout(() => {
-            fetchConfigs(currentPage, perPage, sortParam, serviceParam);
+            fetchConfigs(currentPage, perPage, sortParam);
             fetchServices();
+            fetchUsers();
+            fetchConfigsToSort();
+            fetchRoutes();
             if ((location.pathname).startsWith("/admin")) setAdmin(true);
         }, 100);
     }, []);
@@ -281,8 +357,8 @@ export default function Configs() {
     
 
     useEffect(() => {
-        fetchConfigs(currentPage, perPage, sortParam);
-    }, [currentPage, sortParam]);
+        fetchConfigs(currentPage, perPage, sortParam, userParam, configParam, routeParam);
+    }, [currentPage, sortParam, userParam, configParam, routeParam]);
 
     useEffect(() => {
         fetchConfigs(currentPage, perPage, sortParam);
@@ -324,26 +400,7 @@ export default function Configs() {
 
                             </button>
                         )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAdminPanel(config);
-                            }}
-                            className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 mr-1"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                                      clipRule="evenodd"/>
-                            </svg>
-                            Настройка конфигурации
 
-                        </button>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -492,16 +549,80 @@ export default function Configs() {
         // ));
     };
 
+    const usersById = useMemo(() => {
+        const map = {};
+        users.forEach(user => {
+            map[user.id] = user.username; // или user.username, если поле так называется
+        });
+        return map;
+    }, [users]);
+
+    const configsById = useMemo(() => {
+        const map = {};
+        configs.forEach(config => {
+            map[config.id] = config.name; // или user.username, если поле так называется
+        });
+        return map;
+    }, [configs]);
+
+    const routesById = useMemo(() => {
+        const map = {};
+        routes.forEach(route => {
+            map[route.id] = route.name; // или user.username, если поле так называется
+        });
+        return map;
+    }, [routes]);
+
     const renderUserServices = () => {
+
         console.info('configData: ')
         console.info(configsData)
+
+
         return configsData.items
             .map(config => (
             <div key={config.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
-                            {config.name}
+                        <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 flex-shrink-0 me-1"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+>
+    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+</svg>
+                            {`Дата: ${new Date(config.date_time).toLocaleString('ru-RU')}`}
+                        </h3>
+                        {/* <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 flex-shrink-0 me-1"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+>
+    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+</svg>
+                            {`Пользователь: ${usersById[config.user]}`}
+                        </h3> */}
+                        <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 me-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+                </svg>
+                            {`Маршрут: ${routesById[config.route] ? routesById[config.route] : ""}`}
+                        </h3>
+                        <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5 flex-shrink-0 me-1"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+>
+    <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clipRule="evenodd" />
+    <path d="M6 12a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 01-2 2H2h2a2 2 0 002-2v-2z" />
+</svg>
+                            {`Конфигурация: ${configsById[config.config] ? configsById[config.config] : ""}`}
                         </h3>
                     </div>
 
@@ -521,24 +642,7 @@ export default function Configs() {
 
                             </button>
                         )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAdminPanel(config);
-                            }}
-                            className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
-                                                >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        className="h-5 w-5 flex-shrink-0 me-1"
-                                                        viewBox="0 0 20 20"
-                                                        fill="currentColor"
-                                                    >
-                                                        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                                                    </svg>
-                            Настройка конфигурации
 
-                        </button>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -556,7 +660,7 @@ export default function Configs() {
                                       d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
                                       clipRule="evenodd"/>
                             </svg>
-                            Просмотр конфигурации
+                            Просмотр результата
 
                         </button>
                     </div>
@@ -581,7 +685,7 @@ export default function Configs() {
     return (
         <div className="py-12">
             <Helmet>
-                <title>Список конфигураций</title>
+                <title>Список результатов</title>
             </Helmet>
 
             <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -589,9 +693,9 @@ export default function Configs() {
                     <div className="p-6 text-gray-900">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h1 className="text-2xl font-bold dark:text-gray-200">Список конфигураций</h1>
+                                <h1 className="text-2xl font-bold dark:text-gray-200">Список результатов</h1>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Всего: { configsData.total} конфигураций
+                                    Всего: { configsData.total} результатов
                                 </span>
                                 <div className="flex gap-2 mt-2 flex-wrap">
                                     {admin ?
@@ -629,27 +733,43 @@ export default function Configs() {
                                             </option>
                                         ))}
                                     </select>
+                                    {/* <select
+                                        value={userParam}
+                                        onChange={handleUserChange}
+                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {users.map((opt) => (
+                                            <option key={opt.id} value={opt.id}>
+                                                {opt.username}
+                                            </option>
+                                        ))}
+                                    </select> */}
+
+                                    <select
+                                        value={routeParam}
+                                        onChange={handleRouteChange}
+                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {routes.map((opt) => (
+                                            <option key={opt.id} value={opt.id}>
+                                                {opt.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={configParam}
+                                        onChange={handleConfigChange}
+                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {configs.map((opt) => (
+                                            <option key={opt.id} value={opt.id}>
+                                                {opt.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
-                            {admin && (
-                                <button
-                                    onClick={handleCreateClick}
-                                    className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-5"
-                                >
-                                    <svg 
-                                        xmlns="http://www.w3.org/2000/svg" 
-                                        className="h-5 w-5 flex-shrink-0" 
-                                        fill="none" 
-                                        viewBox="0 0 24 24" 
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
-                                        Добавить экземпляр сервиса
-                                    </span>
-                                </button>
-                            )}
+                        
                         </div>
                         
                         {loading ? (
@@ -759,7 +879,7 @@ export default function Configs() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col dark:bg-gray-800">
                         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                            <h2 className="text-lg font-semibold dark:text-white">{"Окно конфигурации"}</h2>
+                            <h2 className="text-lg font-semibold dark:text-white">Просмотр результата</h2>
                             <button
                                 onClick={closeAdminPanel}
                                 className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"

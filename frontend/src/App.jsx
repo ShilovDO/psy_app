@@ -19,6 +19,7 @@ import CreateRoute from './pages/routes/CreateRoute';
 import RoutePlayer from './pages/routes/RoutePlayer';
 import GuestLayout from './Layouts/GuestLayout';
 import Configs from './pages/configs/Configs.jsx'
+import Results from './pages/results/Results.jsx'
 
 function App() {
     return (
@@ -39,7 +40,7 @@ function App() {
                             <Route path="routes/play/:routeId" element={<RoutePlayer/>}/>
                             <Route path="profile" element={<Edit/>}/>
                             <Route path='configs' element={<Configs/>}/>
-                            
+                            <Route path='results' element={<Results/>}/>
                             {/* Админские маршруты с собственным layout */}
                             <Route element={<AdminLayout/>}>
                                 <Route path="admin/users" element={<Users/>}/>

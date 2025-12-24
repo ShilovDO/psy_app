@@ -43,6 +43,9 @@ app.use('/images', express.static(IMAGES_DIR, {
         res.set('Cache-Control', 'no-store');
     }
 }));
+app.get('/result', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/result.html'));
+});
 
 // Этот запрос вызывается с фронта или другого приложения
 app.post('/api/set_result', (req, res) => {
@@ -90,7 +93,48 @@ app.post('/api/result_save', async (req, res) => {
     }
 });
 
+// Получить результат по ID
+app.get('/api/results/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
 
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Не передан id'
+            });
+        }
+
+        const query = `
+            SELECT id, result
+            FROM schema_comics.results
+            WHERE id = $1
+            ORDER BY date_time DESC
+            LIMIT 1
+        `;
+
+        const dbResult = await db.query(query, [id]);
+
+        if (dbResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Результат не найден'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: dbResult.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Ошибка получения результата:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Внутренняя ошибка сервера'
+        });
+    }
+});
 
 // Эндпоинт для сохранения конфигурации
 app.post('/api/config/save', async (req, res) => {
@@ -148,6 +192,17 @@ app.get('/api/config/:platform_id', async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'Конфигурация не найдена'
+            });
+        }
+
+        if (row.result === null) {
+            return res.json({
+                success: true,
+                data: {
+                    id: row.id,
+                    result: null
+                },
+                message: 'Результат ещё не установлен'
             });
         }
 

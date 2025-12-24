@@ -170,6 +170,7 @@ async def all_station(route_id: int, db):
         Services.name.label('service_name'),
         Services.url.label('url'),
         Services.available.label('available'),
+        Services.admin.label('admin')
     ).join(
         Configs, Stations.config == Configs.id
     ).join(
@@ -180,7 +181,7 @@ async def all_station(route_id: int, db):
 
 
     result = []
-    for station, config_name, config_description, config_id, service_name, url, available in stations_with_services:
+    for station, config_name, config_description, config_id, service_name, url, available, admin in stations_with_services:
         station_dict = station.__dict__.copy()
         
         # Добавляем дополнительные поля
@@ -191,6 +192,7 @@ async def all_station(route_id: int, db):
             "service_name": service_name,
             "url": url,
             "available": available,
+            "admin": admin
         })
 
         # Удаляем внутренний атрибут SQLAlchemy

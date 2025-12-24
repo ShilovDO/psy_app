@@ -126,7 +126,7 @@ export const api = {
     deleteUser: async (id) => {
         return apiClient.post('/delete_user', {id});
     },
-    getUsers: async (page = 1, perPage = 10,  field='name', direction='asc') => {
+    getUsers: async (page = 1, perPage = Number.MAX_SAFE_INTEGER,  field='name', direction='asc') => {
         return apiClient.get('/all_users', { params: { page, per_page: perPage,  field, direction } });
     },
     getServices: async (page = 1, perPage = 10, field='name', direction='asc') => {
@@ -150,7 +150,7 @@ export const api = {
     createService: async (data) => {
         return apiClient.post('/add_service', data);
     },
-    getAllRoutes: async (page = 1, perPage = 10, field='name', direction='asc') => {
+    getAllRoutes: async (page = 1, perPage = Number.MAX_SAFE_INTEGER, field='name', direction='asc') => {
         return apiClient.get('/all_route', { params: { page, per_page: perPage, field, direction } });
     },
     deleteRoute: async (routeId) => {
@@ -192,11 +192,17 @@ export const api = {
     getAllConfigForRoute: async () => {
         return apiClient.get('/all_config_for_route');
     },
+    getAllConfigConfigurable: async () => {
+        return apiClient.get('/all_configs_configurable');
+    },
     createResult: async (data) => {
         return apiClient.post('/create_result', data);
     },
 
     createResult: async (data) => {
         return apiClient.post('/create_result', data);
+    },
+    getResults: async (page = 1, perPage = 10, field='name', direction='asc', user=0, config=0, route=0) => {
+        return apiClient.get('/all_result', { params: { page, per_page: perPage, field, direction, user, config, route } });
     },
 };
