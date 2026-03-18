@@ -10,7 +10,7 @@ import {Link, Outlet, useLocation, useNavigate} from "react-router-dom";
 import '../index.css';
 import UseThemeContext from "../hooks/useThemeContext.js";
 import Spiner from "../Components/Spiner.jsx";
-import {api} from "../api/api.js";
+import {api} from "../api/api";
 import {toast} from "react-toastify";
 
 

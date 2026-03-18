@@ -1,7 +1,7 @@
 // resources/js/Components/ThemeSwitcher.jsx
 import UseThemeContext from "../hooks/useThemeContext.js";
 import {useContext} from "react";
-import {api} from "../api/api.js";
+import {api} from "../api/api";
 import {toast} from "react-toastify";
 export default function ThemeSwitcher() {
     const { currentTheme, toggleTheme } = useContext(UseThemeContext);

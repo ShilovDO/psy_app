@@ -2,9 +2,6 @@ import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import NotFound from './pages/NotFound';
 import AuthenticatedLayout from "./Layouts/AuthenticatedLayout.jsx";
 import AdminLayout from "./Layouts/AdminLayout.jsx";
-import TaskOne from "./pages/TaskOne.jsx";
-import TaskTwo from "./pages/TaskTwo.jsx";
-import TaskThree from "./pages/TaskThree.jsx";
 import Login from './pages/Auth/Login.jsx'
 import Register from './pages/Auth/Register.jsx'
 import Users from './pages/admin/Users.jsx'

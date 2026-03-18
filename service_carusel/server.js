@@ -195,7 +195,7 @@ app.get('/api/config/:platform_id', async (req, res) => {
             });
         }
 
-        if (row.result === null) {
+        if (result.rows[0] == null) {
             return res.json({
                 success: true,
                 data: {

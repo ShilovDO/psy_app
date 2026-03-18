@@ -1,8 +1,8 @@
 import {useState, useEffect, useLayoutEffect} from 'react';
 import {useCookies} from 'react-cookie';
-import {api} from "../api/api.js";
+import {api} from "../api/api";
 import {toast} from "react-toastify";
-import { setNavigate } from '../api/api.js';
+import { setNavigate } from '../api/api';
 import {useNavigate} from "react-router-dom";
 
 export default function useTheme () {

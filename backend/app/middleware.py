@@ -2,7 +2,7 @@ from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from jose import JWTError
 from fastapi.security.utils import get_authorization_scheme_param
-from security import get_current_user
+from app.api.dependencies import get_current_user
 
 async def auth_middleware(request: Request, call_next):
     # Разрешаем OPTIONS запросы без проверки авторизации
@@ -10,7 +10,7 @@ async def auth_middleware(request: Request, call_next):
         return await call_next(request)
     
     # Эндпоинты, не требующие аутентификации
-    public_endpoints = ["/", "/hello", "/auth", "/test", "/refresh", "/registration"]
+    public_endpoints = ["/", "/hello", "/auth/auth", "/test", "/auth/refresh", "/auth/registration"]
     
     if request.url.path in public_endpoints:
         return await call_next(request)
@@ -41,6 +41,7 @@ async def auth_middleware(request: Request, call_next):
             )
 
         # Получаем пользователя
+        
         user = await get_current_user(token)
         if isinstance(user, JSONResponse):
             return user

@@ -1,10 +1,13 @@
-import sys
-import traceback
-from fastapi import Depends, HTTPException, status, Request
-from pydantic_models import NewResult
-from models import Results, Configs, Services
+from fastapi import Request, Depends, APIRouter
+from app.schemas.result import NewResult
+from app.db.models import Results, Configs, Services
+from app.api.dependencies import get_db
+from sqlalchemy.orm import Session
 
-async def create_result(route: NewResult, request: Request, db):
+router = APIRouter()
+
+@router.post("/create_result")
+async def create_result(route: NewResult, request: Request, db: Session = Depends(get_db)):
     user_id = request.state.user.id
     new_result = Results(
         user=user_id,
@@ -18,7 +21,8 @@ async def create_result(route: NewResult, request: Request, db):
     db.refresh(new_result)
     return new_result
 
-async def all_result(field: str, config: int, route: int, user: int, direction: str, db, page: int = 1, per_page: int = 10):
+@router.get("/all_result")
+async def all_result(field: str, config: int, route: int, user: int, direction: str, db: Session = Depends(get_db), page: int = 1, per_page: int = 10):
     offset = (page - 1) * per_page
     # Базовый запрос
     query = (

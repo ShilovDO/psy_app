@@ -4,7 +4,6 @@ from datetime import datetime
 from sqlalchemy import BigInteger, Boolean, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, Text, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
 class Base(DeclarativeBase):
     pass
 
