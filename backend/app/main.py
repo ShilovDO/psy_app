@@ -8,16 +8,18 @@ app = FastAPI()
 
 # CORS
 origins = ["http://localhost:5177", "http://127.0.0.1:5177"]
+
+# Кастомная middleware
+app.middleware("http")(auth_middleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["*"]
 )
-
-# Кастомная middleware
-app.middleware("http")(auth_middleware)
 
 # Подключаем роутеры
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])

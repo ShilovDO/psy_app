@@ -160,12 +160,10 @@ export default function Users() {
     };
 
     useEffect(() => {
-        fetchUsers(currentPage, perPage, sortParam);
-    }, [currentPage, sortParam]);
-
-    useEffect(() => {
-        fetchUsers(currentPage, perPage, sortParam);
-    }, [perPage]);
+        const timer = setTimeout(() => 
+            {fetchUsers(currentPage, perPage, sortParam)},
+            100);      
+    }, [currentPage, sortParam, perPage]);
 
     useEffect(() => {
         const handleEsc = (event) => {

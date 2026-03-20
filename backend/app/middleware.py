@@ -48,8 +48,9 @@ async def auth_middleware(request: Request, call_next):
 
         # Проверка прав администратора
         admin_endpoints = [
-            "/add_service", "/change_service", "/delete_service",
-            "/all_users", "/change_user", "/delete_user", "/all_service"
+            "/services/add_service", "/services/change_service", "/services/delete_service",
+            "/users/all_users", "/users/change_user", "/users/delete_user", "/services/all_service",
+
         ]
         if request.url.path in admin_endpoints and not user.admin:
             raise HTTPException(

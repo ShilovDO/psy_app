@@ -1,6 +1,6 @@
 from fastapi import Request, Depends, APIRouter
 from app.schemas.result import NewResult
-from app.db.models import Results, Configs, Services
+from app.db.models import Results, Configs, Services, Routes
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
 
@@ -22,17 +22,21 @@ async def create_result(route: NewResult, request: Request, db: Session = Depend
     return new_result
 
 @router.get("/all_result")
-async def all_result(field: str, config: int, route: int, user: int, direction: str, db: Session = Depends(get_db), page: int = 1, per_page: int = 10):
+async def all_result(field: str, config: int, route: int, user: int, direction: str, request: Request, db: Session = Depends(get_db), page: int = 1, per_page: int = 10):
     offset = (page - 1) * per_page
+    user_id = request.state.user.id
     # Базовый запрос
     query = (
-    db.query(
-        Results,
-        Services.url.label('url')
+        db.query(
+            Results,
+            Services.url.label('url'),
+            Routes.owner.label('owner')
+        )
+        .join(Routes, Routes.id == Results.route)
+        .join(Configs, Configs.id == Results.config)
+        .join(Services, Services.id == Configs.service)
+        .filter(Routes.owner == user_id)
     )
-    .join(Configs, Configs.id == Results.config)
-    .join(Services, Services.id == Configs.service)
-)
 
     # Фильтрация
     if config != 0:
@@ -58,7 +62,7 @@ async def all_result(field: str, config: int, route: int, user: int, direction: 
 
     items = []
 
-    for result_obj, url in results:
+    for result_obj, url, owner in results:
         result_dict = result_obj.__dict__.copy()
 
         # Убираем служебное поле SQLAlchemy
@@ -66,7 +70,8 @@ async def all_result(field: str, config: int, route: int, user: int, direction: 
 
         # Добавляем данные из JOIN
         result_dict.update({
-            "url": url
+            "url": url,
+            "owner": owner
         })
 
         items.append(result_dict)

@@ -24,7 +24,7 @@ const Dropdown = ({ children }) => {
 
     return (
         <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
-            <div className="relative z-50">{children}</div>
+            <div className="relative">{children}</div>
         </DropDownContext.Provider>
     );
 };
@@ -38,7 +38,7 @@ const Trigger = ({ children }) => {
 
             {open && (
                 <div
-                    className="fixed inset-0 z-50"
+                    className="fixed inset-0"
                     onClick={() => setOpen(false)}
                 ></div>
             )}

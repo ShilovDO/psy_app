@@ -1,9 +1,9 @@
 import { apiClient } from './client';
 
 export const routesApi = {
-  getAllRoutes: async (page = 1, perPage = Number.MAX_SAFE_INTEGER, field = 'name', direction = 'asc') => {
+  getAllRoutes: async (page = 1, perPage = Number.MAX_SAFE_INTEGER, field = 'name', direction = 'asc', visibleParam ="visibled") => {
     return apiClient.get('/routes/all_route', { 
-      params: { page, per_page: perPage, field, direction } 
+      params: { page, per_page: perPage, field, direction, visibleParam } 
     });
   },
 

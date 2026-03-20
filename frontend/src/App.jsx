@@ -21,7 +21,7 @@ import Results from './pages/results/Results.jsx'
 function App() {
     return (
         <CookiesProvider>
-            <ToastContainer position="top-center"/>
+            <ToastContainer position="top-center" autoClose={1500} />
             <Router>
                 <Routes>
                     <Route element={<GeneralLayout/>}>

@@ -20,6 +20,11 @@ const SORT_OPTIONS = [
   {value: "id_desc", label: "Сначала новее"},
   {value: "id_asc", label: "Сначала старее"},
 ];
+const VISIBLE_OPTIONS = [
+  {value: "visibled", label: "Активные"},
+  {value: "hided", label: "Скрытые"},
+  {value: "all", label: "Все"}
+];
 
 export default function AppRoutes() {
   const [routesData, setRoutesData] = useState({
@@ -34,17 +39,18 @@ export default function AppRoutes() {
   const [loadingStations, setLoadingStations] = useState({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortParam, setSortParam] = useState(localStorage.getItem('routes_sort') || 'name_asc');
+  const [visibleParam, setVisibleParam] = useState(localStorage.getItem('routes_visible_param') || 'visibled');
   const navigate = useNavigate();
   const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_route') || 10));
-
+  const [filtersUsed, setFiltersUsed] = useState((localStorage.getItem('routes_sort') || localStorage.getItem('routes_visible_param') || localStorage.getItem('users_per_page_route') || localStorage.getItem('users_per_page_route'))  ? true : false);
   let currentPage = parseInt(searchParams.get("page")) || 1;
 
-  const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc") => {
+  const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc", visibleParam = "visibled") => {
     try {
       setLoading(true);
       const [field, direction] = sort.split("_");
 
-      const response = await api.getAllRoutes(page, per_page, field, direction);
+      const response = await api.getAllRoutes(page, per_page, field, direction, visibleParam);
       if (response?.data) {
         setRoutesData(response.data);
       } else {
@@ -64,6 +70,7 @@ export default function AppRoutes() {
   const handlePerPageChange = (e) => {
     const newPerPage = parseInt(e.target.value);
     setPerPage(newPerPage);
+    setFiltersUsed(true);
     localStorage.setItem('users_per_page_user', newPerPage.toString());
     setSearchParams({ page: 1 });
   };
@@ -100,12 +107,17 @@ export default function AppRoutes() {
   };
 
   const handleDelete = async (routeId) => {
-    if (window.confirm("Вы уверены, что хотите удалить этот маршрут?")) {
       try {
-        await api.deleteRoute(routeId);
-        toast.success("Маршрут успешно удален");
+        const response = await api.deleteRoute(routeId);
+        if (response.data.visible){
+          toast.success("Маршрут успешно возвращён в список активных");
+        }
+        else{
+          toast.success("Маршрут успешно скрыт");
+        }
+        
 
-        fetchRoutes(currentPage, routesData.per_page, sortParam);
+        fetchRoutes(currentPage, routesData.per_page, sortParam, visibleParam);
         setStations((prev) => {
           const newStations = {...prev};
           delete newStations[routeId];
@@ -113,30 +125,50 @@ export default function AppRoutes() {
         });
       } catch (error) {
         if (error.status != 401) {
-            toast.error(error.message || "Ошибка при удалении маршрута");
+            toast.error(error.message || "Ошибка при скрытии/активации маршрута");
         }
 
       }
-    }
+    
   };
 
   const handlePageChange = (newPage) => {
     setSearchParams({page: newPage});
   };
 
+  const clearFilters = () => {
+    setFiltersUsed(false)
+    setSortParam('name_asc')
+    setVisibleParam('visibled')
+    setPerPage(10)
+    localStorage.removeItem('routes_sort')
+    localStorage.removeItem('routes_visible_param')
+    localStorage.removeItem('users_per_page_route')
+
+
+  };
+
   const handleSortChange = (e) => {
     setSortParam(e.target.value);
+    setFiltersUsed(true);
     localStorage.setItem('routes_sort', e.target.value);
+    setSearchParams({page: 1});
+    currentPage = parseInt(searchParams.get("page")) || 1;
+  };
+  const handleVisibleChange = (e) => { 
+    setVisibleParam(e.target.value);
+    setFiltersUsed(true);
+    localStorage.setItem('routes_visible_param', e.target.value);
     setSearchParams({page: 1});
     currentPage = parseInt(searchParams.get("page")) || 1;
   };
 
   useEffect(() => {
-    fetchRoutes(searchParams.get("page"), perPage, sortParam);
-  }, [currentPage, sortParam]);
+    fetchRoutes(searchParams.get("page"), perPage, sortParam, visibleParam);
+  }, [currentPage, sortParam, visibleParam]);
   
   useEffect(() => {
-    fetchRoutes(undefined, perPage, sortParam);
+    fetchRoutes(undefined, perPage, sortParam, visibleParam);
   }, [perPage]);
   return (
       <div className="py-12">
@@ -156,9 +188,29 @@ export default function AppRoutes() {
                       Всего: {routesData.total} маршрутов
                   </span>
                   </div>
+   
                 <div className="flex items-center gap-4 flex-wrap">
-
                     <div className="flex gap-2 mt-2 flex-wrap">
+                    {filtersUsed && (                    <button
+                    onClick={() => clearFilters()}
+                    className="flex р-11 items-center focus:outline-none text-white bg-red-400 hover:bg-red-500 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 dark:bg-red-900 dark:hover:bg-red-800 dark:focus:ring-red-700">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="18" cy="18" r="4.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+                      <path d="M15.5 15.5L20.5 20.5M20.5 15.5L15.5 20.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                      <path d="M4 5H20L14 12V17L10 14V12L4 5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </button>)}
+                    <select
+                          value={visibleParam}
+                          onChange={handleVisibleChange}
+                          className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        {VISIBLE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                        ))}
+                      </select>
                       <select
                           value={sortParam}
                           onChange={handleSortChange}
@@ -181,8 +233,7 @@ export default function AppRoutes() {
                             </option>
                         ))}
                       </select>
-                  </div>
-                  <button
+                      <button
                     onClick={() => {navigate("create-route")}}
                     className="flex р-11 items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-2"
                   >
@@ -199,6 +250,8 @@ export default function AppRoutes() {
                         Добавить маршрут
                     </span>
                   </button>
+                  </div>
+  
                 </div>
               </div>
 
@@ -210,19 +263,31 @@ export default function AppRoutes() {
                             key={route.id}
                             className="border border-gray-200 rounded-lg dark:border-gray-700"
                         >
+                          
                           <div
                               className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-t-lg flex-wrap">
+                <div className="flex items-center">
+                {route.visible ? (<svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-3 text-green-600 dark:text-green-400`} viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                        </svg>) : ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-orange-600 dark:text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                                              <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                              <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                         
+                                          </svg>)}
                             <h3 className="text-lg break-normal font-medium text-gray-900 dark:text-gray-200">
                               {route.name}
                             </h3>
+                            </div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 {/* Dropdown с действиями */}
                                 <Dropdown>
                                     <Dropdown.Trigger>
                                         <button
                                             type="button"
-                                            className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300"
+                                            className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300 z-0"
                                         >
+                                          
                                             <svg
                                                 className="h-full w-auto text-center m-0"
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -257,29 +322,27 @@ export default function AppRoutes() {
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                                                 />
                                             </svg>
-                                            Изменить
+                                            Создать на основе
                                         </Dropdown.Link>
 
                                         <Dropdown.Link
                                             as="button"
                                             onClick={() => handleDelete(route.id)}
-                                            className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
+                                            className={`flex items-center px-4 py-2 text-sm ${route.visible ? "text-orange-600 dark:text-orange-400" : "text-green-600 dark:text-green-400"} hover:bg-gray-100 dark:text-orange-400 dark:hover:bg-gray-600`}
                                         >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-5 w-5 mr-2"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path 
-                                                    strokeLinecap="round" 
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                />
-                                            </svg>
-                                            Удалить
+
+                                            {route.visible ? ( <>
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                              <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                              <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                         
+                                          </svg>
+                                              Скрыть </>
+                                            ) : ( <><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                        </svg>
+                                        Сделать активным </>)}
                                         </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>

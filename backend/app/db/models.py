@@ -7,7 +7,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 class Base(DeclarativeBase):
     pass
 
-
 class Services(Base):
     __tablename__ = 'services'
     __table_args__ = (
@@ -23,7 +22,6 @@ class Services(Base):
 
     configs: Mapped[List['Configs']] = relationship("Configs", back_populates="services")
 
-
 class Users(Base):
     __tablename__ = 'users'
     __table_args__ = (
@@ -36,10 +34,9 @@ class Users(Base):
     password: Mapped[str] = mapped_column(Text)
     admin: Mapped[bool] = mapped_column(Boolean)
 
-    routes: Mapped[List['Routes']] = relationship('Routes', back_populates='users')
+    routes: Mapped[List['Routes']] = relationship('Routes', back_populates='users', secondary='users_routes')
     configs: Mapped[List['Configs']] = relationship('Configs', back_populates='users')
-
-
+    users_routes: Mapped[List['UsersRoutes']] = relationship('UsersRoutes', back_populates='user')
 
 class Routes(Base):
     __tablename__ = 'routes'
@@ -51,10 +48,26 @@ class Routes(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=9223372036854775807, cycle=False, cache=1), primary_key=True)
     owner: Mapped[int] = mapped_column(BigInteger)
     name: Mapped[str] = mapped_column(Text)
+    visible: Mapped[bool] = mapped_column(Boolean)
 
     users: Mapped['Users'] = relationship('Users', back_populates='routes')
     stations: Mapped[List['Stations']] = relationship('Stations', back_populates='routes')
+    users_routes: Mapped[List['UsersRoutes']] = relationship('UsersRoutes', back_populates='route')
 
+class UsersRoutes(Base):
+    __tablename__ = 'users_routes'
+    __table_args__ = (
+        ForeignKeyConstraint(['user_id'], ['users.id'], name='users_routes_users_id_fk'),
+        ForeignKeyConstraint(['route_id'], ['routes.id'], name='users_routes_routes_id_fk'),
+        PrimaryKeyConstraint('user_id', 'route_id', name='users_routes_pk'),
+    )
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    route_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    visible: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    user: Mapped['Users'] = relationship('Users', back_populates='users_routes')
+    route: Mapped['Routes'] = relationship('Routes', back_populates='users_routes')
 
 class Stations(Base):
     __tablename__ = 'stations'
@@ -75,7 +88,6 @@ class Stations(Base):
     routes: Mapped['Routes'] = relationship('Routes', back_populates='stations')
     configs: Mapped['Configs'] = relationship('Configs', back_populates='stations')
 
-
 class Configs(Base):
     __tablename__ = 'configs'
     __table_args__ = (
@@ -93,7 +105,6 @@ class Configs(Base):
     users: Mapped['Users'] = relationship('Users', back_populates='configs')
     stations: Mapped[List['Stations']] = relationship("Stations", back_populates="configs")
     services: Mapped['Services'] = relationship('Services', back_populates='configs')
-
 
 class Results(Base):
     __tablename__ = 'results'

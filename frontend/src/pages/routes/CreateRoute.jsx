@@ -94,48 +94,8 @@ export default function CreateRoute() {
         }
 
         try {
-            setLoading(true);
-
-
-            if(routeId){
-
-                await api.changeRoute({id: routeId, name: routeName});
-
-                for (const station of stations) {
-                    let data_stations = {
-                        id: station.id,
-                        number: station.number,
-                        config: station.config,
-                        next: station.number === stations.length ? 0 : station.number + 1,
-                        description: station.description,
-                        entry: false
-                    }
-                    alert(data_stations.id)
-                    if (data_stations.id !== undefined)
-                    {
-                        await api.changeStation(data_stations);
-                    }
-                    else
-                    {
-                        data_stations = {
-                            route_id: routeId,
-                            number: station.number,
-                            config: station.config,
-                            next: station.number === stations.length ? 0 : station.number + 1,
-                            entry: false,
-                            description: station.description,
-                            entry: false
-                        }
-                        await api.createStation(data_stations);
-                    }
-                }
-                
-                for (const deleted_station of deletedStations){
-                    await api.deleteStation(deleted_station.id);
-                }
-            }
-            else{
-
+            setLoading(true);      
+        
                 const routeResponse = await api.createRoute({ name: routeName });
                 const route_id = routeResponse.data.id;
                 
@@ -151,7 +111,7 @@ export default function CreateRoute() {
                     await api.createStation(data_stations);
                 }
                 
-            }
+            
             toast.success("Маршрут успешно создан");
             navigate("/routes");
         } catch (error) {
@@ -173,10 +133,7 @@ export default function CreateRoute() {
             </Helmet>
             {/* Боковая панель настроек */}
             <div className="w-1/3 p-6 overflow-y-auto bg-white dark:bg-gray-800 shadow-lg">
-                {!routeId ? 
-                <h1 className="text-2xl font-bold mb-6 dark:text-gray-200">Создание маршрута</h1> : 
-                <h1 className="text-2xl font-bold mb-6 dark:text-gray-200">Изменение маршрута</h1>}
-                      
+                <h1 className="text-2xl font-bold mb-6 dark:text-gray-200">Создание маршрута</h1>     
                 <form onSubmit={handleSubmit}>
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -290,7 +247,7 @@ export default function CreateRoute() {
                             disabled={loading}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                         >
-                            {loading ? "Создание..." : routeId ? "Изменить маршрут": "Создать маршрут"}
+                            {loading ? "Создание..." : "Создать маршрут"}
                         </button>
                     </div>
                 </form>

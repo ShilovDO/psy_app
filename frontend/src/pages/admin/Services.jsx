@@ -55,7 +55,7 @@ export default function Services() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [sortParam, setSortParam] = useState((location.pathname).startsWith("/admin") ? localStorage.getItem('service_sort_admin') || 'name_asc' : localStorage.getItem('service_sort') || 'name_asc');
     const [perPage, setPerPage] = useState((location.pathname).startsWith("/admin") ? parseInt(localStorage.getItem('services_per_page_admin') || 10) : (parseInt(localStorage.getItem('services_per_page'))|| 10));
-
+    const temp = null;
     const currentPage = parseInt(searchParams.get("page")) || 1;
 
     const {
@@ -210,23 +210,19 @@ export default function Services() {
     }
 
     useEffect(() => {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             fetchServices(currentPage, perPage, sortParam);
-            if ((location.pathname).startsWith("/admin")) setAdmin(true);
-            else setAdmin(false);
+            if (location.pathname.startsWith("/admin")) {
+                setAdmin(true);
+            } else {
+                setAdmin(false);
+            }
         }, 100);
-    }, []);
-
     
+        return () => clearTimeout(timer);
+    }, [currentPage, perPage, sortParam]);
 
-    useEffect(() => {
-        fetchServices(currentPage, perPage, sortParam);
-    }, [currentPage, sortParam]);
-
-    useEffect(() => {
-        fetchServices(currentPage, perPage, sortParam);
-    }, [perPage]);
-
+ 
     useEffect(() => {
         const handleEsc = (event) => {
             if (event.key === "Escape") setIsServiceModalOpen(false);

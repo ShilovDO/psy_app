@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="123dd6b3-987a-448c-b512-383a141c9e73" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../frontend/src/App.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/TaskOne.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/TaskThree.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/TaskTwo.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../service_carusel/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/../service_carusel/server.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/api/routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/api/routes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,26 +50,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "FastAPI.FastAPIProjectPsycho.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.main.executor": "Run",
-    "Python.test.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "dev",
-    "last_opened_file_path": "C:/Users/shilo/PycharmProjects/FastAPIProjectPsycho/psycho",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\PyCharm 2025.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;FastAPI.FastAPIProjectPsycho.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/shilo/PycharmProjects/FastAPIProjectPsycho/psycho&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\PyCharm 2025.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="FastAPI.FastAPIProjectPsycho">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="FastAPIProjectPsycho" />
@@ -136,8 +136,8 @@
     </configuration>
     <list>
       <item itemvalue="FastAPI.FastAPIProjectPsycho" />
-      <item itemvalue="Python.test" />
       <item itemvalue="Python.main" />
+      <item itemvalue="Python.test" />
     </list>
     <recent_temporary>
       <list>
@@ -201,7 +201,10 @@
       <workItem from="1773242840283" duration="1444000" />
       <workItem from="1773381151490" duration="593000" />
       <workItem from="1773639997071" duration="2244000" />
-      <workItem from="1773817742348" duration="16982000" />
+      <workItem from="1773817742348" duration="24120000" />
+      <workItem from="1773920359865" duration="20000" />
+      <workItem from="1773920468538" duration="633000" />
+      <workItem from="1773989325676" duration="2051000" />
     </task>
     <servers />
   </component>
@@ -222,24 +225,29 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/api/endpoints/routes.py</url>
-          <line>21</line>
+          <line>23</line>
           <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/api/endpoints/routes.py</url>
-          <line>22</line>
+          <line>24</line>
           <option name="timeStamp" value="19" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/api/endpoints/auth.py</url>
-          <line>101</line>
+          <line>100</line>
           <option name="timeStamp" value="20" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app/api/endpoints/results.py</url>
+          <line>25</line>
+          <option name="timeStamp" value="21" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1773852598440" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1774018961725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/psycho$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1748980062076" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/backend$test.coverage" NAME="test Coverage Results" MODIFIED="1773833722797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/psycho$main.coverage" NAME="main Coverage Results" MODIFIED="1747730190252" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
