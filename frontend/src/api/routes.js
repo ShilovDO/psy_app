@@ -21,5 +21,9 @@ export const routesApi = {
 
   deleteRoute: async (routeId) => {
     return apiClient.post('/routes/delete_route', { id: routeId });
-  }
+  },
+
+  shareRoute: async (data) => {
+    return apiClient.post('/routes/share_route', data);
+  },
 };

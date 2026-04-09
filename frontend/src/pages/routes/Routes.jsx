@@ -6,7 +6,7 @@ import {Helmet} from "react-helmet";
 import {useNavigate, useSearchParams} from "react-router-dom";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
-
+import Avatar from "../../Components/Avatar.jsx";
 const PER_PAGE_OPTIONS = [
     { value: 5, label: "5 записей" },
     { value: 10, label: "10 записей" },
@@ -34,6 +34,7 @@ export default function AppRoutes() {
     per_page: 10,
     total_pages: 1,
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stations, setStations] = useState({});
   const [loadingStations, setLoadingStations] = useState({});
@@ -43,7 +44,21 @@ export default function AppRoutes() {
   const navigate = useNavigate();
   const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_route') || 10));
   const [filtersUsed, setFiltersUsed] = useState((localStorage.getItem('routes_sort') || localStorage.getItem('routes_visible_param') || localStorage.getItem('users_per_page_route') || localStorage.getItem('users_per_page_route'))  ? true : false);
+  const [usersSearchOut, setUsersSearchOut] = useState([]);
+  const [usersSearchIn, setUsersSearchIn] = useState([]);
+  const [searchOut, setSearchOut] = useState("");
+  const [searchIn, setSearchIn] = useState("");
+  const [currentRoute, setCurrentRoute] = useState(null);
   let currentPage = parseInt(searchParams.get("page")) || 1;
+
+  useEffect(() => {
+
+    const handleEsc = (event) => {
+        if (event.key === "Escape") setIsModalOpen(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+}, []);
 
   const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc", visibleParam = "visibled") => {
     try {
@@ -131,7 +146,10 @@ export default function AppRoutes() {
       }
     
   };
-
+  const handleOpenModal = (routeId) => {
+    setCurrentRoute(routeId);
+    setIsModalOpen(true);
+  };
   const handlePageChange = (newPage) => {
     setSearchParams({page: newPage});
   };
@@ -146,6 +164,37 @@ export default function AppRoutes() {
     localStorage.removeItem('users_per_page_route')
 
 
+  };
+  const handleChangeSearchOut = async (e) => {
+    try {
+      if (e != null)
+        setSearchOut(e.target.value);
+        const response = await api.searchOutUsers(e == null ? searchOut : e.target.value, currentRoute);
+        setUsersSearchOut(response.data);
+        
+    } catch (error) {
+        toast.error(error.response?.data?.detail || "Ошибка");
+    }
+};
+  const handleChangeSearchIn = async (e) => {
+    try {
+        if (e != null)
+          setSearchIn(e.target.value);
+        const response = await api.searchInUsers(e == null ? searchIn : e.target.value, currentRoute);
+        setUsersSearchIn(response.data);      
+    } catch (error) {
+        toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
+  
+  const handleMoveUserBetweenRoutes = async (userId) => {
+    try {
+        const response = await api.shareRoute({user_id:userId, route_id:currentRoute});
+        handleChangeSearchIn(null);
+        handleChangeSearchOut(null);
+    } catch (error) {
+        toast.error(error.response?.data?.detail || "Ошибка");
+    }
   };
 
   const handleSortChange = (e) => {
@@ -170,6 +219,11 @@ export default function AppRoutes() {
   useEffect(() => {
     fetchRoutes(undefined, perPage, sortParam, visibleParam);
   }, [perPage]);
+  useEffect(() => {
+    if(isModalOpen){
+      handleChangeSearchIn(null);
+    }
+  }, [isModalOpen]);
   return (
       <div className="py-12">
         <Helmet>
@@ -302,6 +356,28 @@ export default function AppRoutes() {
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content   side="right">
+                                    <Dropdown.Link
+                                            as="button"
+                                            onClick={() => handleOpenModal(route.id)}
+                                           
+                                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+                                        >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-5 w-5 mr-2"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                                            />
+                                        </svg>
+                                            Поделиться маршрутом
+                                        </Dropdown.Link>
                                         <Dropdown.Link
                                             as="button"
                                             to={`create-route/${route.id}`}
@@ -438,6 +514,162 @@ export default function AppRoutes() {
             </div>
           </div>
         </div>
+
+        {/* Модальное окно */}
+        {isModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl dark:bg-gray-800">
+                    <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold dark:text-gray-200">
+                                Поделиться маршрутом
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setSearchIn('');
+                                    setSearchOut('');
+                                    setUsersSearchIn([]);
+                                    setUsersSearchOut([]);
+                                }}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="flex justify-between gap-5">
+                            <div className="mb-4 w-1/2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Поиск пользователей без маршрута
+                                </label>
+                                <input
+                                    placeholder="Введите имя пользователя"
+                                    type="text"
+                                    value={searchOut}
+                                    onChange={handleChangeSearchOut}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                />
+                            </div>
+                            <div className="mb-4 w-1/2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Поиск пользователей с маршрутом
+                                </label>
+                                <input
+                                    placeholder="Введите имя пользователя"
+                                    type="text"
+                                    value={searchIn}
+                                    onChange={handleChangeSearchIn}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between gap-5">
+                            <div className="h-64 overflow-y-auto w-1/2 border border-gray-300 rounded-md shadow-sm">
+                            {usersSearchOut.length > 0 ? (
+                   usersSearchOut?.map((user) => (
+                    <div
+                        key={user.id}
+                        className="flex justify-between items-center w-full p-4 border-b border-gray-100 dark:border-gray-700 transition-colors hover:cursor-pointer"
+                    >
+                        <div className="flex items-center w-full">
+                            <Avatar email={user.mail} size="sm" className="me-2"/>
+                            <div className="flex-1">
+                                <p className="text-sm font-bold text-gray-900 truncate dark:text-gray-200">
+                                    {user.username}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate dark:text-gray-400">
+                                    {user.mail}
+                                </p>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
+                                </div>
+                            </div>
+                            <button 
+                                className="bg-transparent hover:bg-green-500 text-green-700 font-semibold hover:text-green-900 py-1 px-2 border border-green-500 hover:border-transparent rounded"
+                                onClick={() => handleMoveUserBetweenRoutes(user.id)}
+                            >
+                                →
+                            </button>
+                        </div>
+                    </div>
+                ))
+                            ) : (searchOut == "" ? (
+                              <div className="flex flex-col items-center justify-center h-full text-center">
+                              <span>Воспользуйтесь поиском для отображения списка</span>
+                          </div> ) : 
+                          (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                              <span>{`Пользователь ${searchOut} не найден`}</span>
+                          </div>
+                          )
+                            )}
+             
+                            </div>
+                            <div className="h-64 overflow-y-auto w-1/2 border border-gray-300 rounded-md shadow-sm">
+                                {usersSearchIn.length > 0 ? (
+                                usersSearchIn?.map((user) => (
+                                  <div
+                                      key={user.id}
+                                      className="flex justify-between items-center w-full p-4 border-b border-gray-100 dark:border-gray-700 transition-colors hover:cursor-pointer"
+                                  > 
+                                      <div className="flex items-center w-full">
+                                          <Avatar email={user.mail} size="sm" className="me-2"/>
+                                          <div className="flex-1">
+                                              <p className="text-sm font-bold text-gray-900 truncate dark:text-gray-200">
+                                                  {user.username}
+                                              </p>
+                                              <p className="text-xs text-gray-500 truncate dark:text-gray-400">
+                                                  {user.mail}
+                                              </p>
+                                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                  {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
+                                              </div>
+                                          </div>
+                                          <button 
+                                              className="bg-transparent hover:bg-red-500 text-red-700 font-semibold hover:text-red-900 py-1 px-2 border border-red-500 hover:border-transparent rounded"
+                                              onClick={() => handleMoveUserBetweenRoutes(user.id)}
+                                          >
+                                              ←
+                                          </button>
+                                      </div>
+                                  </div>
+                              ))) : (searchIn == "" ? (
+                              <div className="flex flex-col items-center justify-center h-full text-center">
+                                  <span>В этом маршруте нет пользователей</span>
+                              </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center h-full text-center">
+                                <span>{`Пользователь ${searchIn} не найден`}</span>
+                            </div>
+                              )
+                                 
+                                )}
+                             
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                onClick={() => {
+                                    setIsModalOpen(false);
+                                    setSearchIn('');
+                                    setSearchOut('');
+                                    setUsersSearchIn([]);
+                                    setUsersSearchOut([]);
+                                }}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-700"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
       </div>
   );
 }

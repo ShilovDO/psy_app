@@ -1,29 +1,30 @@
 from fastapi import HTTPException, status, Request, Depends, APIRouter
-from app.schemas.route import NewRoute, Route, ChangeRoute
+from app.schemas.route import NewRoute, Route, ChangeRoute, ShareRouteRequest
 from app.schemas.user import ID
-from app.db.models import Routes, Stations, UsersRoutes
+from app.db.models import Routes, UsersRoutes, Users
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 
+
 @router.post("/add_route")
-async def create_route(route: NewRoute, request: Request, db: Session = Depends(get_db)):
+async def create_route(
+    route: NewRoute, request: Request, db: Session = Depends(get_db)
+):
     user_id = request.state.user.id
-    new_route = Routes(
-        name=route.name,
-        owner=user_id,
-        visible = True
-    )
+    new_route = Routes(name=route.name, owner=user_id, visible=True)
     db.add(new_route)
     db.commit()
     db.refresh(new_route)
     return new_route
 
+
 @router.get("/get_route/{route_id}")
 async def get_route(route_id: int, db: Session = Depends(get_db)):
     find_route = db.query(Routes).filter(Routes.id == route_id).first()
     return find_route
+
 
 @router.post("/delete_route")
 async def delete_route(route: Route, db: Session = Depends(get_db)):
@@ -35,22 +36,26 @@ async def delete_route(route: Route, db: Session = Depends(get_db)):
         return check_route
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Route doesn't exists"
+            status_code=status.HTTP_400_BAD_REQUEST, message="Route doesn't exists"
         )
 
+
 @router.get("/all_route")
-async def all_route(request: Request, visibleParam: str, field: str, direction: str, db: Session = Depends(get_db), page: int = 1, per_page: int = 10):
+async def all_route(
+    request: Request,
+    visibleParam: str,
+    field: str,
+    direction: str,
+    db: Session = Depends(get_db),
+    page: int = 1,
+    per_page: int = 10,
+):
     user_id = request.state.user.id
     # Вычисляем смещение
     offset = (page - 1) * per_page
 
     # Определяем видимость
-    visible_map = {
-        "hided": False,
-        "visibled": True,
-        "all": None
-    }
+    visible_map = {"hided": False, "visibled": True, "all": None}
     visible = visible_map.get(visibleParam)
 
     # Формируем базовый запрос
@@ -77,8 +82,9 @@ async def all_route(request: Request, visibleParam: str, field: str, direction: 
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": total_pages
+        "total_pages": total_pages,
     }
+
 
 @router.post("/change_route")
 async def change_route(route: ChangeRoute, db: Session = Depends(get_db)):
@@ -88,43 +94,54 @@ async def change_route(route: ChangeRoute, db: Session = Depends(get_db)):
 
         if not existing_route:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Route not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Route not found"
             )
 
         existing_route.name = route.name
 
         db.commit()
         return existing_route
-        
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 
 @router.post("/share_route")
-async def share_route(route: Route, user: ID, db: Session = Depends(get_db)):
-    shared_route = UsersRoutes(
-        user_id=user.id,
-        route_id=route.id,
-        visible = True
-    )
-    db.add(shared_route)
-    db.commit()
-    db.refresh(shared_route)
-    return shared_route
+async def share_route(request: ShareRouteRequest, db: Session = Depends(get_db)):
+    check_share = db.query(UsersRoutes).filter(
+        UsersRoutes.route_id == request.route_id, 
+        UsersRoutes.user_id == request.user_id
+    ).first()   
+    if check_share:
+        db.delete(check_share)
+        db.commit()
+        return {"message": "Маршрут удалён из общего доступа"}
+    else:
+        shared_route = UsersRoutes(user_id=request.user_id, route_id=request.route_id, visible=True)
+        db.add(shared_route)
+        db.commit()
+        db.refresh(shared_route)
+        return shared_route
+
 
 @router.get("/users_in_route")
-async def all_route(route: Route, direction: str, db: Session = Depends(get_db), page: int = 1, per_page: int = 10):
+async def all_route(
+    route: Route,
+    direction: str,
+    db: Session = Depends(get_db),
+    page: int = 1,
+    per_page: int = 10,
+):
     # Вычисляем смещение
     offset = (page - 1) * per_page
 
     # Формируем базовый запрос
-    base_query = db.query(UsersRoutes, Users).filter(
-        UsersRoutes.route_id == route.id
-    ).join(Users, Users.id == UsersRoutes.user_id)
+    base_query = (
+        db.query(UsersRoutes, Users)
+        .filter(UsersRoutes.route_id == route.id)
+        .join(Users, Users.id == UsersRoutes.user_id)
+    )
 
     # Получаем общее количество записей
     total = base_query.count()
@@ -140,11 +157,7 @@ async def all_route(route: Route, direction: str, db: Session = Depends(get_db),
     # Парсим результаты в читаемый формат
     items = []
     for user_route, user in results:
-        items.append({
-            "id": user.id,
-            "username": user.username,
-            "mail": user.mail
-        })
+        items.append({"id": user.id, "username": user.username, "mail": user.mail})
 
     # Вычисляем общее количество страниц
     total_pages = (total + per_page - 1) // per_page
@@ -154,5 +167,5 @@ async def all_route(route: Route, direction: str, db: Session = Depends(get_db),
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": total_pages
+        "total_pages": total_pages,
     }

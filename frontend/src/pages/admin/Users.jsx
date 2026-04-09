@@ -9,7 +9,8 @@ import { useForm } from "react-hook-form";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import { useSearchParams } from "react-router-dom";
-
+import { RadioGroup } from "@headlessui/react";
+import { Button } from "@headlessui/react";
 export default function Users() {
     const PER_PAGE_OPTIONS = [
         { value: 5, label: "5 записей" },
@@ -109,9 +110,16 @@ export default function Users() {
     const handleEditClick = (user) => {
         setIsCreating(false);
         setCurrentUserId(user.id);
+
         setValue('username', user.username);
         setValue('mail', user.mail);
-        setValue('admin', user.admin);
+
+        // 👇 ключевая строка
+        setValue(
+            'admin',
+            user.admin === null ? "null" : String(user.admin)
+        );
+
         setIsModalOpen(true);
     };
 
@@ -129,17 +137,27 @@ export default function Users() {
 
     const onSubmit = async (data) => {
         try {
+            // 👇 приводим к нормальному виду
+            const normalizedData = {
+                ...data,
+                admin:
+                    data.admin === "null"
+                        ? null
+                        : data.admin === "true"
+            };
+
             if (isCreating && mailFree) {
-                await api.postRegister(data);
+                await api.postRegister(normalizedData);
                 toast.success("Пользователь создан");
             } else {
-                await api.updateUser({ ...data, id: currentUserId });
+                await api.updateUser({ ...normalizedData, id: currentUserId });
                 toast.success("Пользователь обновлен");
             }
+
             setIsModalOpen(false);
             fetchUsers(currentPage, perPage, sortParam);
         } catch (error) {
-            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'}`);
+            toast.error(error.response?.data?.detail || "Ошибка");
         }
     };
 
@@ -259,7 +277,7 @@ export default function Users() {
                                                             {user.mail}
                                                         </p>
                                                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {user.admin ? 'Администратор' : 'Пользователь'}
+                                                            {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -433,19 +451,43 @@ export default function Users() {
                                                 )}
                                             </>)}
                                 </div>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Роль пользователя
+                                        </label>
 
-                                <div className="mb-4 flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="admin"
-                                        {...register('admin')}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
-                                    />
-                                    <label htmlFor="admin"
-                                           className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                                        Администратор
-                                    </label>
-                                </div>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    value="true"
+                                                    {...register("admin")}
+                                                    className="h-4 w-4"
+                                                />
+                                                <label className="ml-2">Администратор</label>
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    value="false"
+                                                    {...register("admin")}
+                                                    className="h-4 w-4"
+                                                />
+                                                <label className="ml-2">Психолог</label>
+                                            </div>
+
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    value="null"
+                                                    {...register("admin")}
+                                                    className="h-4 w-4"
+                                                />
+                                                <label className="ml-2">Клиент</label>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                 <div className="flex justify-end space-x-3">
                                     <button

@@ -13,5 +13,17 @@ export const usersApi = {
 
   deleteUser: async (id) => {
     return apiClient.post('/users/delete_user', { id });
+  },
+  
+  searchInUsers: async (search, route_id) => {
+    return apiClient.get('/users/search_users_in_route', { 
+      params: { search, route_id } 
+    });
+  },
+
+  searchOutUsers: async (search, route_id) => {
+    return apiClient.get('/users/search_users_out_route', { 
+      params: { search, route_id } 
+    });
   }
 };

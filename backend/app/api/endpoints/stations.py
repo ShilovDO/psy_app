@@ -17,7 +17,7 @@ async def add_station(station: NewStation, db: Session = Depends(get_db)):
             next=station.next,
             entry=station.entry,
             config=station.config,
-            description=station.description
+            description=station.description,
         )
         db.add(new_station)
         db.commit()
@@ -33,20 +33,21 @@ async def add_station(station: NewStation, db: Session = Depends(get_db)):
         # Поднимаем исключение с информацией об ошибке
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error adding a record to the database: {str(e)}"
+            detail=f"Error adding a record to the database: {str(e)}",
         )
+
 
 @router.post("/delete_station")
 async def delete_station(station: Route, db: Session = Depends(get_db)):
     check_stations = db.query(Stations).filter(Stations.id == station.id).first()
     if check_stations:
-        user_stations = db.query(Stations).filter(Stations.id == station.id).delete()   
+        user_stations = db.query(Stations).filter(Stations.id == station.id).delete()
         return user_stations
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Route doesn't exists"
+            status_code=status.HTTP_400_BAD_REQUEST, message="Route doesn't exists"
         )
+
 
 @router.post("/change_station")
 async def change_station(station: ChangeStation, db: Session = Depends(get_db)):
@@ -56,8 +57,7 @@ async def change_station(station: ChangeStation, db: Session = Depends(get_db)):
 
         if not existing_station:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Station not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Station not found"
             )
         # Обновляем поля
         if station.number is not None:
@@ -73,47 +73,57 @@ async def change_station(station: ChangeStation, db: Session = Depends(get_db)):
 
         db.commit()
         return existing_station
-        
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 
 @router.get("/all_station/{route_id}")
 async def all_station(route_id: int, db: Session = Depends(get_db)):
-    stations_with_services = db.query(
-        Stations,
-        Configs.name.label('config_name'),
-        Configs.description.label('config_description'),
-        Configs.id.label('config_id'),
-        Services.name.label('service_name'),
-        Services.url.label('url'),
-        Services.available.label('available'),
-        Services.admin.label('admin')
-    ).join(
-        Configs, Stations.config == Configs.id
-    ).join(
-        Services, Configs.service == Services.id
-    ).filter(
-        Stations.route == route_id
-    ).order_by(Stations.number).all()
+    stations_with_services = (
+        db.query(
+            Stations,
+            Configs.name.label("config_name"),
+            Configs.description.label("config_description"),
+            Configs.id.label("config_id"),
+            Services.name.label("service_name"),
+            Services.url.label("url"),
+            Services.available.label("available"),
+            Services.admin.label("admin"),
+        )
+        .join(Configs, Stations.config == Configs.id)
+        .join(Services, Configs.service == Services.id)
+        .filter(Stations.route == route_id)
+        .order_by(Stations.number)
+        .all()
+    )
 
     result = []
-    for station, config_name, config_description, config_id, service_name, url, available, admin in stations_with_services:
-        station_dict = station.__dict__.copy()    
+    for (
+        station,
+        config_name,
+        config_description,
+        config_id,
+        service_name,
+        url,
+        available,
+        admin,
+    ) in stations_with_services:
+        station_dict = station.__dict__.copy()
         # Добавляем дополнительные поля
-        station_dict.update({
-            "config_name": config_name,
-            "config_description": config_description,
-            "config_id": config_id,
-            "service_name": service_name,
-            "url": url,
-            "available": available,
-            "admin": admin
-        })
+        station_dict.update(
+            {
+                "config_name": config_name,
+                "config_description": config_description,
+                "config_id": config_id,
+                "service_name": service_name,
+                "url": url,
+                "available": available,
+                "admin": admin,
+            }
+        )
         # Удаляем внутренний атрибут SQLAlchemy
-        station_dict.pop('_sa_instance_state', None)
+        station_dict.pop("_sa_instance_state", None)
         result.append(station_dict)
     return result

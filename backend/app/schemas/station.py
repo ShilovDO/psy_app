@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class NewStation(BaseModel):
     route_id: int
     number: int
@@ -7,6 +8,7 @@ class NewStation(BaseModel):
     entry: bool
     config: int
     description: str
+
 
 class ChangeStation(BaseModel):
     id: int

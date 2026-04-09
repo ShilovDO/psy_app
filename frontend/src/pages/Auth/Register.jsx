@@ -176,13 +176,24 @@ export default function Register() {
 
                     <div className="mt-2">
                         <div className="flex items-center gap-2">
-                            <Checkbox
-                                id="remember"
-                                className="block"
-                                {...register('admin', {
-                                    required: false
-                                })}
-                            />
+                            <RadioGroup
+                            id="remember"
+                            className="block"
+                            {...register('admin', {
+                                required: false
+                            })}>
+                                <RadioButton>
+                                    Клиент
+                                </RadioButton>
+                                    
+                                <RadioButton>
+                                   Психолог 
+                                </RadioButton>
+                                    
+                                <RadioButton>
+                                    Админ
+                                </RadioButton>                       
+                            </RadioGroup>
                             <InputLabel htmlFor="admin" value="Будет являться администратором?"/>
                         </div>
                         {errors?.rules && (

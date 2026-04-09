@@ -18,7 +18,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
-    expose_headers=["*"]
+    expose_headers=["*"],
 )
 
 # Подключаем роутеры
@@ -30,6 +30,7 @@ app.include_router(routes.router, prefix="/routes", tags=["Routes"])
 app.include_router(stations.router, prefix="/stations", tags=["Stations"])
 app.include_router(results.router, prefix="/results", tags=["Results"])
 
+
 @app.get("/get_current_user")
 async def currenUser(request: Request):
     try:
@@ -39,7 +40,7 @@ async def currenUser(request: Request):
             "id": request.state.user.id,
             "username": request.state.user.username,
             "email": request.state.user.mail,
-            "admin": request.state.user.admin
+            "admin": request.state.user.admin,
         }
         return JSONResponse(
             content={"user": user_dict},
@@ -47,5 +48,5 @@ async def currenUser(request: Request):
     except:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"message": "Successfully logged out"}
+            content={"message": "Successfully logged out"},
         )

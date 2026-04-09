@@ -5,11 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="123dd6b3-987a-448c-b512-383a141c9e73" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/api/routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/api/routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend (2).zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Auth/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Auth/Register.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,6 +93,29 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FastAPIProjectPsycho" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="FastAPIProjectPsycho" />
       <option name="ENV_FILES" value="" />
@@ -115,6 +137,46 @@
       <option name="MODULE_MODE" value="false" />
       <option name="REDIRECT_INPUT" value="false" />
       <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FastAPIProjectPsycho" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="FastAPIProjectPsycho" type="Python.FastAPI">
+      <option name="additionalOptions" value="--reload --port 8001" />
+      <option name="file" value="C:\git_psy\psy_app\backend\app\main.py" />
+      <module name="FastAPIProjectPsycho" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$USER_HOME$/AppData/Local/Programs/Python/Python311/python.exe" />
+      <option name="SDK_NAME" value="Python 3.11" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
       <method v="2" />
     </configuration>
     <configuration name="FastAPIProjectPsycho" type="Python.FastAPI">
@@ -204,7 +266,12 @@
       <workItem from="1773817742348" duration="24120000" />
       <workItem from="1773920359865" duration="20000" />
       <workItem from="1773920468538" duration="633000" />
-      <workItem from="1773989325676" duration="2051000" />
+      <workItem from="1773989325676" duration="3680000" />
+      <workItem from="1774023012411" duration="309000" />
+      <workItem from="1774247214067" duration="1663000" />
+      <workItem from="1774597640579" duration="740000" />
+      <workItem from="1775570286912" duration="3231000" />
+      <workItem from="1775578747791" duration="10381000" />
     </task>
     <servers />
   </component>
@@ -220,7 +287,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/api/endpoints/configs.py</url>
-          <line>75</line>
+          <line>86</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -234,20 +301,20 @@
           <option name="timeStamp" value="19" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app/api/endpoints/auth.py</url>
-          <line>100</line>
-          <option name="timeStamp" value="20" />
+          <url>file://$PROJECT_DIR$/app/api/endpoints/results.py</url>
+          <line>39</line>
+          <option name="timeStamp" value="21" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app/api/endpoints/results.py</url>
-          <line>25</line>
-          <option name="timeStamp" value="21" />
+          <url>file://$PROJECT_DIR$/app/api/endpoints/users.py</url>
+          <line>58</line>
+          <option name="timeStamp" value="22" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1774018961725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1775751271343" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/psycho$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1748980062076" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/backend$test.coverage" NAME="test Coverage Results" MODIFIED="1773833722797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/psycho$main.coverage" NAME="main Coverage Results" MODIFIED="1747730190252" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
