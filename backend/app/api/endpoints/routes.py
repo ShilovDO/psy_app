@@ -4,9 +4,9 @@ from app.schemas.user import ID
 from app.db.models import Routes, UsersRoutes, Users
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, case
 
 router = APIRouter()
-
 
 @router.post("/add_route")
 async def create_route(
@@ -27,17 +27,27 @@ async def get_route(route_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/delete_route")
-async def delete_route(route: Route, db: Session = Depends(get_db)):
-    check_route = db.query(Routes).filter(Routes.id == route.id).first()
+async def delete_route(route: Route, request: Request, db: Session = Depends(get_db)):
+    user_id = request.state.user.id
+
+    check_route = db.query(Routes).filter(Routes.id == route.id, Routes.owner == user_id).first()
+
     if check_route:
         check_route.visible = not check_route.visible
         db.commit()
         db.refresh(check_route)
         return check_route
     else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, message="Route doesn't exists"
-        )
+        check_route = db.query(UsersRoutes).filter(UsersRoutes.route_id == route.id, UsersRoutes.user_id == user_id).first()
+        if check_route:
+            check_route.visible = not check_route.visible
+            db.commit()
+            db.refresh(check_route)
+            return check_route
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, message="Route doesn't exists"
+            )
 
 
 @router.get("/all_route")
@@ -51,34 +61,68 @@ async def all_route(
     per_page: int = 10,
 ):
     user_id = request.state.user.id
-    # Вычисляем смещение
     offset = (page - 1) * per_page
 
-    # Определяем видимость
     visible_map = {"hided": False, "visibled": True, "all": None}
     visible = visible_map.get(visibleParam)
 
-    # Формируем базовый запрос
-    base_query = db.query(Routes).filter(Routes.owner == user_id)
-    if visible is not None:  # visibleParam не равен "all"
-        base_query = base_query.filter(Routes.visible == visible)
+    # Запрос с LEFT JOIN к UsersRoutes для текущего пользователя
+    query = db.query(
+        Routes,
+        (Routes.owner == user_id).label("is_owner"),
+        # Вычисляем эффективное visible:
+        # если есть запись в UsersRoutes – берём оттуда, иначе из Routes
+        case(
+            (UsersRoutes.user_id == user_id, UsersRoutes.visible),
+            else_=Routes.visible
+        ).label("effective_visible")
+    ).outerjoin(
+        UsersRoutes,
+        (UsersRoutes.route_id == Routes.id) & (UsersRoutes.user_id == user_id)
+    ).filter(
+        # Показываем маршруты, где пользователь либо владелец, либо приглашён
+        or_(
+            Routes.owner == user_id,
+            UsersRoutes.user_id == user_id
+        )
+    )
 
-    # Получаем общее количество маршрутов
-    total = base_query.count()
+    # Фильтрация по видимости с учётом роли
+    if visible is not None:
+        query = query.filter(
+            or_(
+                (Routes.owner == user_id) & (Routes.visible == visible),
+                (UsersRoutes.user_id == user_id) & (UsersRoutes.visible == visible)
+            )
+        )
 
-    # Определяем сортировку
-    order_column = Routes.name if field == "name" else Routes.id
+    # Сортировка
+    if field == "name":
+        order_col = Routes.name
+    else:
+        order_col = Routes.id
     if direction == "desc":
-        order_column = order_column.desc()
+        order_col = order_col.desc()
 
-    # Получаем пагинированный список маршрутов с сортировкой
-    routes = base_query.order_by(order_column).offset(offset).limit(per_page).all()
+    query = query.order_by(order_col)
 
-    # Вычисляем общее количество страниц
+    # Общее количество записей (учитывает фильтры)
+    total = query.count()
+
+    # Пагинация
+    results = query.offset(offset).limit(per_page).all()
+
+    # Формируем ответ: подменяем поле visible и добавляем is_owner
+    items = []
+    for route, is_owner, effective_visible in results:
+        route.visible = effective_visible   # заменяем visible на правильное значение
+        route.is_owner = is_owner           # добавляем флаг
+        items.append(route)
+
     total_pages = (total + per_page - 1) // per_page
 
     return {
-        "items": routes,
+        "items": items,
         "total": total,
         "page": page,
         "per_page": per_page,

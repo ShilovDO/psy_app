@@ -6,6 +6,7 @@ from app.core.security import get_password_hash
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -152,18 +153,20 @@ async def delete_user(Id: ID, request: Request, db: Session = Depends(get_db)):
         )
 
 @router.get("/search_users_out_route", response_model=List[User])
-async def search_users(route_id: int, search: str = "", db: Session = Depends(get_db)):
+async def search_users(route_id: int, request: Request, search: str = "", db: Session = Depends(get_db)):
     if not search:
         return []
     
+    user_id = request.state.user.id
     # Получаем user_id всех записей для данного маршрута
     existing_records = db.query(UsersRoutes.user_id).filter(
-        UsersRoutes.route_id == route_id
+        UsersRoutes.route_id == route_id,
     ).all()
     existing_user_ids = {record.user_id for record in existing_records}
     
     # Ищем пользователей, которых нет в маршруте
     users = db.query(Users).filter(
+        Users.id != user_id,
         Users.username.like(f"{search}%"),
         ~Users.id.in_(existing_user_ids) if existing_user_ids else True
     ).all()
@@ -179,6 +182,8 @@ async def search_users(route_id: int, search: str = "", db: Session = Depends(ge
         for user in users
     ]
 
+
+
 @router.get("/search_users_in_route", response_model=List[User])
 async def search_users(route_id: int, search: str = "", db: Session = Depends(get_db)):
     # Получаем user_id всех записей для данного маршрута
@@ -190,10 +195,10 @@ async def search_users(route_id: int, search: str = "", db: Session = Depends(ge
     # Базовый запрос — только пользователи из маршрута
     query = db.query(Users).filter(Users.id.in_(existing_user_ids))
     
-    # Если есть поисковый запрос — добавляем фильтр
+    # Если есть поисковый запрос — добавляем регистронезависимый фильтр
     if search:
-        query = query.filter(Users.username.like(f"{search}%"))
-    
+        query = query.filter(Users.username.ilike(f"{search}%"))
+        
     users = query.all()
     
     return [
