@@ -78,97 +78,105 @@ export default function RoutePlayer() {
 
     const currentStation = stations[currentStationIndex];
 
-    // Обработчик перехода к следующей станции
-    const handleNextStation = async () => {
-        try {
-            console.info("Объект current station");
-            console.info(currentStation)
-            const datetime = new Date().toISOString();
-            if (currentStation.admin){
-            // Записываем результат
-            const result = await api.createResult({
-                    station: currentStation.id,
-                    config: currentStation.config_id,
-                    route: currentStation.route,
-                    date_time: datetime
-                });
-            
-            const response = await fetch(
-                 `${currentStation.url}/api/result_save`,
-                {
-                    method: "POST",
-                    headers: {
-                    "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        id: result.data.id,
-                        user: result.data.user,
-                        station: currentStation.id,
-                        route: currentStation.route,
-                        config: currentStation.config_id,
-                        date: datetime
-                    }),
-                }
-                );
-            }
-            
-            if (currentStationIndex < stations.length - 1) {
-                setIsTransitioning(true);
-
-                // Обновляем статус станции через бекенд
-                await api.changeStation({
-                    id: currentStation.id,
-                    number: currentStation.number,
-                    entry: true,
-                    next: currentStation.next,
-                    config: currentStation.config_id,
-                    description: currentStation.description || ""
-                });
-                
-                // Обновляем локальное состояние
-                const updatedStations = [...stations];
-                updatedStations[currentStationIndex].entry = true;
-                setStations(updatedStations);
-
-                // Добавляем текущую станцию в список завершенных
-                setCompletedStations(prev => [...prev, stations[currentStationIndex]]);
-
-             
+// Обработчик перехода к следующей станции
+const handleNextStation = async () => {
+    console.info("Объект current station");
+    console.info(currentStation);
+    const datetime = new Date().toISOString();
     
-                // Задержка для анимации перед переходом
-                setTimeout(() => {
-                    setCurrentStationIndex(prev => prev + 1);
-                    setIsTransitioning(false);
-                    
-                    // Проверяем доступность следующей станции
-                    if (stations[currentStationIndex + 1]?.available === false) {
-                        setShowUnavailableModal(true);
+    if (currentStation.admin) {
+        // Записываем результат
+        const result = await api.createResult({
+            station: currentStation.id,
+            config: currentStation.config_id,
+            route: currentStation.route,
+            date_time: datetime
+        });
+        console.info(result); // Исправлено: console.li -> console.log
+        
+        if (result.status == 200) {
+            try {
+                const response = await fetch(
+                    `${currentStation.url}/api/result_save`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            id: result.data.id,
+                            user: result.data.user,
+                            station: currentStation.id,
+                            route: currentStation.route,
+                            config: currentStation.config_id,
+                            date: datetime
+                        }),
                     }
-                }, 500);
-            } else {
-                // Маршрут завершен - обновляем последнюю станцию
-                await api.changeStation({
-                    id: currentStation.id,
-                    number: currentStation.number,
-                    entry: true,
-                    next: currentStation.next,
-                    config: currentStation.config_id,
-                    description: currentStation.description || ""
+                );
+                console.info(response.ok);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            } catch (error) {
+                const result_del = await api.deleteResult({
+                    id: result.data.id,
                 });
-
-                // Обновляем локальное состояние
-                const updatedStations = [...stations];
-                updatedStations[currentStationIndex].entry = true;
-                setStations(updatedStations);
-
-                setShowCompletionModal(true);
+                console.info("Ошибка при отправке результата:", error);
+                toast.error("Результат не был сохранён из-за сбоя сервиса");               
             }
-        } catch (error) {
-            toast.error("Ошибка при обновлении статуса станции");
-            console.error(error);
-            setIsTransitioning(false);
         }
-    };
+    }
+
+    if (currentStationIndex < stations.length - 1) {
+        setIsTransitioning(true);
+
+        // Обновляем статус станции через бекенд
+        await api.changeStation({
+            id: currentStation.id,
+            number: currentStation.number,
+            entry: true,
+            next: currentStation.next,
+            config: currentStation.config_id,
+            description: currentStation.description || ""
+        });
+        
+        // Обновляем локальное состояние
+        const updatedStations = [...stations];
+        updatedStations[currentStationIndex].entry = true;
+        setStations(updatedStations);
+
+        // Добавляем текущую станцию в список завершенных
+        setCompletedStations(prev => [...prev, stations[currentStationIndex]]);
+
+        // Задержка для анимации перед переходом
+        setTimeout(() => {
+            setCurrentStationIndex(prev => prev + 1);
+            setIsTransitioning(false);
+            
+            // Проверяем доступность следующей станции
+            if (stations[currentStationIndex + 1]?.available === false) {
+                setShowUnavailableModal(true);
+            }
+        }, 500);
+    } else {
+        // Маршрут завершен - обновляем последнюю станцию
+        await api.changeStation({
+            id: currentStation.id,
+            number: currentStation.number,
+            entry: true,
+            next: currentStation.next,
+            config: currentStation.config_id,
+            description: currentStation.description || ""
+        });
+
+        // Обновляем локальное состояние
+        const updatedStations = [...stations];
+        updatedStations[currentStationIndex].entry = true;
+        setStations(updatedStations);
+
+        setShowCompletionModal(true);
+    }
+};
 
     // Пропустить недоступную станцию
     const handleSkipUnavailableStation = async () => {

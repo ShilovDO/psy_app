@@ -23,7 +23,13 @@ const SORT_OPTIONS = [
 const VISIBLE_OPTIONS = [
   {value: "visibled", label: "Активные"},
   {value: "hided", label: "Скрытые"},
-  {value: "all", label: "Все"}
+  {value: "all", label: "Любой видимости"}
+];
+
+const ROUTE_TYPE_OPTIONS = [
+  {value: "all", label: "С любым типом"},
+  {value: "own", label: "Мои"},
+  {value: "shared", label: "Доступные мне"}
 ];
 
 export default function AppRoutes() {
@@ -41,6 +47,7 @@ export default function AppRoutes() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortParam, setSortParam] = useState(localStorage.getItem('routes_sort') || 'name_asc');
   const [visibleParam, setVisibleParam] = useState(localStorage.getItem('routes_visible_param') || 'visibled');
+  const [routeTypeParam, setRouteTypeParam] = useState(localStorage.getItem('routes_route_type_param') || 'all');
   const navigate = useNavigate();
   const [perPage, setPerPage] = useState(parseInt(localStorage.getItem('users_per_page_route') || 10));
   const [filtersUsed, setFiltersUsed] = useState((localStorage.getItem('routes_sort') || localStorage.getItem('routes_visible_param') || localStorage.getItem('users_per_page_route') || localStorage.getItem('users_per_page_route'))  ? true : false);
@@ -60,12 +67,12 @@ export default function AppRoutes() {
     return () => window.removeEventListener("keydown", handleEsc);
 }, []);
 
-  const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc", visibleParam = "visibled") => {
+  const fetchRoutes = async (page = 1, per_page = perPage, sort = "id_asc", visibleParam = "visibled", routeTypeParam = "all") => {
     try {
       setLoading(true);
       const [field, direction] = sort.split("_");
 
-      const response = await api.getAllRoutes(page, per_page, field, direction, visibleParam);
+      const response = await api.getAllRoutes(page, per_page, field, direction, visibleParam, routeTypeParam);
       if (response?.data) {
         setRoutesData(response.data);
       } else {
@@ -132,7 +139,7 @@ export default function AppRoutes() {
         }
         
 
-        fetchRoutes(currentPage, routesData.per_page, sortParam, visibleParam);
+        fetchRoutes(currentPage, routesData.per_page, sortParam, visibleParam, routeTypeParam);
         setStations((prev) => {
           const newStations = {...prev};
           delete newStations[routeId];
@@ -158,6 +165,7 @@ export default function AppRoutes() {
     setFiltersUsed(false)
     setSortParam('name_asc')
     setVisibleParam('visibled')
+    setRouteTypeParam('all')
     setPerPage(10)
     localStorage.removeItem('routes_sort')
     localStorage.removeItem('routes_visible_param')
@@ -211,13 +219,19 @@ export default function AppRoutes() {
     setSearchParams({page: 1});
     currentPage = parseInt(searchParams.get("page")) || 1;
   };
-
+  const handleRouteTypeChange = (e) => { 
+    setRouteTypeParam(e.target.value);
+    setFiltersUsed(true);
+    localStorage.setItem('routes_route_type_param', e.target.value);
+    setSearchParams({page: 1});
+    currentPage = parseInt(searchParams.get("page")) || 1;
+  };
   useEffect(() => {
-    fetchRoutes(searchParams.get("page"), perPage, sortParam, visibleParam);
-  }, [currentPage, sortParam, visibleParam]);
+    fetchRoutes(searchParams.get("page"), perPage, sortParam, visibleParam, routeTypeParam);
+  }, [currentPage, sortParam, visibleParam, routeTypeParam]);
   
   useEffect(() => {
-    fetchRoutes(undefined, perPage, sortParam, visibleParam);
+    fetchRoutes(undefined, perPage, sortParam, visibleParam, routeTypeParam);
   }, [perPage]);
   useEffect(() => {
     if(isModalOpen){
@@ -254,6 +268,17 @@ export default function AppRoutes() {
                       <path d="M4 5H20L14 12V17L10 14V12L4 5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
                   </button>)}
+                  <select
+                          value={routeTypeParam}
+                          onChange={handleRouteTypeChange}
+                          className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      >
+                        {ROUTE_TYPE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                        ))}
+                      </select>
                     <select
                           value={visibleParam}
                           onChange={handleVisibleChange}

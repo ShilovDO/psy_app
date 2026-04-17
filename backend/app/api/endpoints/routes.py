@@ -54,6 +54,7 @@ async def delete_route(route: Route, request: Request, db: Session = Depends(get
 async def all_route(
     request: Request,
     visibleParam: str,
+    routeType: str,
     field: str,
     direction: str,
     db: Session = Depends(get_db),
@@ -66,12 +67,10 @@ async def all_route(
     visible_map = {"hided": False, "visibled": True, "all": None}
     visible = visible_map.get(visibleParam)
 
-    # Запрос с LEFT JOIN к UsersRoutes для текущего пользователя
+    # Базовый запрос с LEFT JOIN и вычисляемыми полями
     query = db.query(
         Routes,
         (Routes.owner == user_id).label("is_owner"),
-        # Вычисляем эффективное visible:
-        # если есть запись в UsersRoutes – берём оттуда, иначе из Routes
         case(
             (UsersRoutes.user_id == user_id, UsersRoutes.visible),
             else_=Routes.visible
@@ -86,6 +85,16 @@ async def all_route(
             UsersRoutes.user_id == user_id
         )
     )
+
+    # Фильтрация по типу маршрута (own / shared / all)
+    if routeType == "own":
+        query = query.filter(Routes.owner == user_id)
+    elif routeType == "shared":
+        query = query.filter(
+            Routes.owner != user_id,
+            UsersRoutes.user_id == user_id
+        )
+    # routeType == "all" – ничего не добавляем
 
     # Фильтрация по видимости с учётом роли
     if visible is not None:
@@ -106,17 +115,17 @@ async def all_route(
 
     query = query.order_by(order_col)
 
-    # Общее количество записей (учитывает фильтры)
+    # Общее количество записей
     total = query.count()
 
     # Пагинация
     results = query.offset(offset).limit(per_page).all()
 
-    # Формируем ответ: подменяем поле visible и добавляем is_owner
+    # Формируем ответ
     items = []
     for route, is_owner, effective_visible in results:
-        route.visible = effective_visible   # заменяем visible на правильное значение
-        route.is_owner = is_owner           # добавляем флаг
+        route.visible = effective_visible
+        route.is_owner = is_owner
         items.append(route)
 
     total_pages = (total + per_page - 1) // per_page

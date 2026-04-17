@@ -1,11 +1,11 @@
-from fastapi import Request, Depends, APIRouter
+from fastapi import Request, Depends, APIRouter, HTTPException, status
 from app.schemas.result import NewResult
 from app.db.models import Results, Configs, Services, Routes
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
+from app.schemas.user import ID
 
 router = APIRouter()
-
 
 @router.post("/create_result")
 async def create_result(
@@ -24,6 +24,17 @@ async def create_result(
     db.refresh(new_result)
     return new_result
 
+@router.post("/delete_result")
+async def delete_config(result_id: ID, db: Session = Depends(get_db)):
+    check_result = db.query(Results).filter(Results.id == result_id.id).first()
+    if check_result:
+        result = db.query(Configs).filter(Configs.id == result_id.id).delete()
+        return check_result
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Не удаётся удалить результат. Попробуйте в другой раз...",
+        )
 
 @router.get("/all_result")
 async def all_result(
