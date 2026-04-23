@@ -27,8 +27,13 @@ class FullUser(BaseModel):
     password: str
     admin: Optional[bool] = None
 
-
 class ID(BaseModel):
     id: int
 
+class UsersResponse(BaseModel):
+    id: int
+    username: str
+    mail: str
+    admin: Optional[bool] = None
+    photo: Optional[str] = None
 

@@ -8,7 +8,7 @@ export default function Edit() {
     // Подключаем контекст
     const context = useContext(UseThemeContext);
     // Берём state пользователя для взятия из него информации
-    const { user } = context;
+    const { user, getInfoBase } = context;
 
     // Путь, куда будем перенаправлять пользователя, если он не вошёл в аккаунт
     const fallbackPath = "/login";
@@ -30,6 +30,7 @@ export default function Edit() {
                         <ProfileInformation
                             className="max-w-xl"
                             user={user}
+                            getInfoBase={getInfoBase}
                         />
                     </div>
                 </div>

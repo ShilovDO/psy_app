@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.middleware import auth_middleware
 from app.api.endpoints import auth, users, services, configs, routes, stations, results
 from fastapi.responses import JSONResponse
+import base64
 
 app = FastAPI()
 
@@ -34,13 +35,19 @@ app.include_router(results.router, prefix="/results", tags=["Results"])
 @app.get("/get_current_user")
 async def currenUser(request: Request):
     try:
+        image_base64 = None
+        if request.state.user.photo:
+            with open(request.state.user.photo, "rb") as img_file:
+                image_bytes = img_file.read()
+                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
         if request.method == "OPTIONS":
             return Response(status_code=200)
         user_dict = {
             "id": request.state.user.id,
             "username": request.state.user.username,
             "email": request.state.user.mail,
-            "admin": request.state.user.admin,
+            "photo": image_base64,
+            "admin": request.state.user.admin
         }
         return JSONResponse(
             content={"user": user_dict},

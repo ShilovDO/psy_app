@@ -66,6 +66,7 @@ class Users(Base):
     username: Mapped[str] = mapped_column(Text)
     mail: Mapped[str] = mapped_column(Text)
     password: Mapped[str] = mapped_column(Text)
+    photo: Mapped[str] = mapped_column(Text)
     admin: Mapped[bool] = mapped_column(Boolean)
 
     routes: Mapped[List["Routes"]] = relationship(

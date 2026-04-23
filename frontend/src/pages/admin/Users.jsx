@@ -268,7 +268,7 @@ export default function Users() {
                                                 className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 transition-colors"
                                             >
                                                 <div className="flex-1 flex items-center gap-3">
-                                                    <Avatar email={user.mail} size="md" className="me-2"/>
+                                                    <Avatar email={user.mail} avatarUrl={user?.photo} size="md" className="me-2"/>
                                                     <div className="flex-1">
                                                         <p className="text-lg font-medium text-gray-900 truncate dark:text-gray-200">
                                                             {user.username}

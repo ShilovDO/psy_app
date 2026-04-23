@@ -6,10 +6,10 @@ const createApiClient = () => {
   const client = axios.create({
     baseURL: BASE_URL,
     withCredentials: true,
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+    // headers: {
+    //   'Accept': 'application/json',
+    //   'Content-Type': 'application/json'
+    // }
   });
 
   setupInterceptors(client);

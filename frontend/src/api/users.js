@@ -25,5 +25,8 @@ export const usersApi = {
     return apiClient.get('/users/search_users_out_route', { 
       params: { search, route_id } 
     });
-  }
+  },
+  addImage: async (data) => {
+    return apiClient.post('/users/add_image', data);
+  },
 };

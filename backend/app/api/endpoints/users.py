@@ -1,15 +1,22 @@
 from starlette import status
-from fastapi import HTTPException, status, Request, Depends, APIRouter
-from app.schemas.user import ID, User, FullUser
+from fastapi import HTTPException, status, Request, Depends, APIRouter, UploadFile, File
+from app.schemas.user import ID, User, FullUser, UsersResponse
 from app.db.models import Users, Routes, Stations, UsersRoutes
 from app.core.security import get_password_hash
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy import func
+import os
+import uuid
+from pathlib import Path 
+import shutil
+import base64
 
 router = APIRouter()
 
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)  # создаем папку, если её нет
 
 @router.post("/change_user")
 async def change_user(user: FullUser, db: Session = Depends(get_db)):
@@ -48,7 +55,7 @@ async def change_user(user: FullUser, db: Session = Depends(get_db)):
         }
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User doesn't exists"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
         )
 
 
@@ -106,6 +113,28 @@ async def all_users(
 
     # Вычисляем общее количество страниц
     total_pages = (total + per_page - 1) // per_page
+
+    items = []
+    for user in users:
+        # Формируем base64 для изображения, если оно есть
+        image_base64 = None
+        if user.photo:
+            try:
+                with open(user.photo, "rb") as img_file:
+                    image_bytes = img_file.read()
+                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            except Exception as e:
+                print(f"Error reading image: {e}")
+
+        # Создаем объект ответа
+        users_response = UsersResponse(
+            id=user.id,
+            username=user.username,
+            mail=user.mail,
+            admin=user.admin,
+            photo=image_base64
+        )
+        items.append(users_response)
 
     # Преобразуем каждую запись в Pydantic модель
     users_list = [User(**user.__dict__) for user in users]
@@ -210,3 +239,49 @@ async def search_users(route_id: int, search: str = "", db: Session = Depends(ge
         )
         for user in users
     ]
+
+@router.post("/add_image")
+async def addProduct(
+    image: UploadFile = File(None),
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        user_id = request.state.user.id
+        find_user = db.query(Users).filter(Users.id == user_id).first()
+        if find_user:
+            # 1. Сохраняем файл на диск
+            # Генерируем уникальное имя файла
+            file_extension = os.path.splitext(find_user.mail)[1]
+            safe_filename = f"{uuid.uuid4()}{file_extension}"
+            file_path = UPLOAD_DIR / safe_filename
+            # Сохраняем файл
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(image.file, buffer)
+
+            # 2. Формируем объект для БД
+            find_user.photo = str(file_path)
+
+            # 3. Сохраняем в БД
+            db.commit()
+            db.refresh(find_user)
+
+            # 4. Возвращаем ответ (без изображения)
+            return {
+                "id": find_user.id,
+                "username": find_user.username,
+                "mail": find_user.mail,
+                "admin": find_user.admin,
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    finally:
+        db.close()

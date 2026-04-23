@@ -1,7 +1,8 @@
+// Components/Avatar.jsx
 import React from 'react';
 import md5 from 'md5';
 
-const Avatar = ({ email, size = 'md', className = '' }) => {
+const Avatar = ({ email, avatarUrl = null, size = 'md', className = '' }) => {
     const sizes = {
         xs: 'w-6 h-6 text-xs',
         sm: 'w-8 h-8 text-sm',
@@ -12,16 +13,26 @@ const Avatar = ({ email, size = 'md', className = '' }) => {
     };
 
     const sizeClass = sizes[size] || sizes.md;
+    const type = null;
+    // Если передан avatarUrl – используем его, иначе Gravatar или fallback
+    const getImageUrl = () => {
+        if (avatarUrl) return avatarUrl;
+        const hash = email ? md5(email.trim().toLowerCase()) : 'test';
+        return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=512`;
+    };
 
-    const gravatarUrl = `https://www.gravatar.com/avatar/${email ? md5(email?.trim().toLowerCase()) : 'test'}?d=identicon&s=512`;
+    const imageUrl = getImageUrl();
 
     return (
         <img
-            src={gravatarUrl}
+            src={avatarUrl ? `data:image/png;base64,${imageUrl}` : imageUrl}
             alt="User avatar"
-            className={`rounded-full ${sizeClass} ${className}`}
+            className={`rounded-full object-cover ${sizeClass} ${className}`}
             onError={(e) => {
-                e.target.src = `https://ui-avatars.com/api/?name=${email ? encodeURIComponent(email) : 'test'}&background=random`;
+                const hash = email ? md5(email.trim().toLowerCase()) : 'test';
+                if (!avatarUrl) {
+                    e.target.src = `https://www.gravatar.com/avatar/${hash}?d=identicon&s=512`;
+                }
             }}
         />
     );
