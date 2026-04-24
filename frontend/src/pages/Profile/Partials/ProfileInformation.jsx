@@ -1,13 +1,14 @@
-// ProfileInformation.jsx
-import React, { useContext, useState, useRef, useEffect } from 'react';
+// ProfileInformation.jsx (исправленный)
+import React, { useState, useRef, useEffect } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import Avatar from '../../../Components/Avatar.jsx';
-import { api } from "../../../api/api.js";
+import { api } from "../../../api/api"
+import { toast } from "react-toastify";
 
 export default function ProfileInformation({
     className = '',
-    user=null,
+    user = null,
     getInfoBase = null,
     onAvatarUpdate,
 }) {
@@ -18,21 +19,20 @@ export default function ProfileInformation({
     const [isUploading, setIsUploading] = useState(false);
     const imageRef = useRef(null);
     const fileInputRef = useRef(null);
-    // Открываем проводник
+
     const handleAvatarClick = () => {
         fileInputRef.current.click();
     };
 
-    // Выбор файла
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            alert('Пожалуйста, выберите изображение');
+            toast.error("Пожалуйста, выберите изображение");
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert('Файл не должен превышать 5 МБ');
+            toast.error("Файл не должен превышать 5 МБ");
             return;
         }
 
@@ -45,15 +45,14 @@ export default function ProfileInformation({
         e.target.value = '';
     };
 
-    // Автоматическая установка максимального квадратного кропа после загрузки изображения
+    // Автоматический максимальный квадратный кроп (в процентах)
     useEffect(() => {
         if (!imgSrc || !imageRef.current) return;
 
         const img = imageRef.current;
         const onImageLoad = () => {
             const { naturalWidth, naturalHeight } = img;
-            const size = Math.min(naturalWidth, naturalHeight); // максимальный квадрат
-            // Вычисляем отступы и размер в процентах
+            const size = Math.min(naturalWidth, naturalHeight);
             const widthPercent = (size / naturalWidth) * 100;
             const heightPercent = (size / naturalHeight) * 100;
             const xPercent = ((naturalWidth - size) / 2 / naturalWidth) * 100;
@@ -68,7 +67,7 @@ export default function ProfileInformation({
                 aspect: 1,
             };
             setCrop(newCrop);
-            setCompletedCrop(newCrop); // сразу завершаем кроп, чтобы кнопка стала активной
+            setCompletedCrop(newCrop);
         };
 
         if (img.complete) {
@@ -79,36 +78,58 @@ export default function ProfileInformation({
         }
     }, [imgSrc]);
 
-    // Обрезка в Blob
+    // Универсальная обрезка с поддержкой % и px
     const getCroppedBlob = async () => {
         if (!completedCrop || !imageRef.current) return null;
 
-        const canvas = document.createElement('canvas');
         const image = imageRef.current;
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
+        const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        const cropArea = {
-            x: completedCrop.x * scaleX,
-            y: completedCrop.y * scaleY,
-            width: completedCrop.width * scaleX,
-            height: completedCrop.height * scaleY,
-        };
+        const naturalWidth = image.naturalWidth;
+        const naturalHeight = image.naturalHeight;
+        const displayedWidth = image.width;
+        const displayedHeight = image.height;
 
-        canvas.width = cropArea.width;
-        canvas.height = cropArea.height;
+        let cropX = completedCrop.x;
+        let cropY = completedCrop.y;
+        let cropWidth = completedCrop.width;
+        let cropHeight = completedCrop.height;
+
+        console.log('Исходный completedCrop:', completedCrop);
+        console.log(`natural: ${naturalWidth}x${naturalHeight}, displayed: ${displayedWidth}x${displayedHeight}`);
+
+        if (completedCrop.unit === '%') {
+            // Преобразуем проценты в пиксели относительно натурального размера
+            cropX = (cropX / 100) * naturalWidth;
+            cropY = (cropY / 100) * naturalHeight;
+            cropWidth = (cropWidth / 100) * naturalWidth;
+            cropHeight = (cropHeight / 100) * naturalHeight;
+        } else {
+            // Если единица 'px' – координаты даны относительно отображаемого размера
+            const scaleX = naturalWidth / displayedWidth;
+            const scaleY = naturalHeight / displayedHeight;
+            cropX = cropX * scaleX;
+            cropY = cropY * scaleY;
+            cropWidth = cropWidth * scaleX;
+            cropHeight = cropHeight * scaleY;
+        }
+
+        // Округляем, чтобы избежать полупикселей
+        cropX = Math.round(cropX);
+        cropY = Math.round(cropY);
+        cropWidth = Math.round(cropWidth);
+        cropHeight = Math.round(cropHeight);
+
+        console.log(`Обрезаемая область после пересчёта: x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
+
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
 
         ctx.drawImage(
             image,
-            cropArea.x,
-            cropArea.y,
-            cropArea.width,
-            cropArea.height,
-            0,
-            0,
-            cropArea.width,
-            cropArea.height
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
         );
 
         return new Promise((resolve) => {
@@ -116,27 +137,32 @@ export default function ProfileInformation({
         });
     };
 
-    // Отправка на бэкенд
     const handleSaveCrop = async () => {
         const blob = await getCroppedBlob();
-        if (!blob) return;
+        if (!blob) {
+            toast.error("Невозможно сохранить без выделения области");
+            return;
+        }
 
         setIsUploading(true);
         const formData = new FormData();
-        formData.append('image', blob, 'avatar.jpg'); // исправлено имя поля
+        formData.append('image', blob, 'avatar.jpg');
 
         try {
             const response = await api.addImage(formData);
-            if (response.status == 200) getInfoBase();
-            if (onAvatarUpdate) {
-                onAvatarUpdate(user?.url);
+            if (response.status === 200) {
+                if (getInfoBase) getInfoBase();
+                if (onAvatarUpdate) onAvatarUpdate(user?.photo);
+                setShowCropModal(false);
+                setImgSrc(null);
+                setCompletedCrop(null);
+            } else {
+                toast.error("Ошибка загрузки");
+                throw new Error('Ошибка загрузки');
             }
-            setShowCropModal(false);
-            setImgSrc(null);
-            setCompletedCrop(null);
         } catch (err) {
+            toast.error("Ошибка загрузки");
             console.error('Ошибка:', err);
-            alert('Не удалось загрузить аватар: ' + err.message);
         } finally {
             setIsUploading(false);
         }
@@ -204,7 +230,6 @@ export default function ProfileInformation({
                 </div>
             </div>
 
-            {/* Модальное окно */}
             {showCropModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-4">
@@ -216,7 +241,7 @@ export default function ProfileInformation({
                                     onChange={setCrop}
                                     onComplete={setCompletedCrop}
                                     aspect={1}
-                                    circularCrop={true}   // визуальный круг
+                                    circularCrop={true}
                                 >
                                     <img
                                         ref={imageRef}

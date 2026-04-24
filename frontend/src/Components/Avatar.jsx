@@ -2,7 +2,7 @@
 import React from 'react';
 import md5 from 'md5';
 
-const Avatar = ({ email, avatarUrl = null, size = 'md', className = '' }) => {
+const Avatar = ({ email, avatarUrl = null, size = 'md', className = '', inEdit=false }) => {
     const sizes = {
         xs: 'w-6 h-6 text-xs',
         sm: 'w-8 h-8 text-sm',
@@ -25,7 +25,7 @@ const Avatar = ({ email, avatarUrl = null, size = 'md', className = '' }) => {
 
     return (
         <img
-            src={avatarUrl ? `data:image/png;base64,${imageUrl}` : imageUrl}
+            src={avatarUrl && !inEdit ? `data:image/png;base64,${imageUrl}` : imageUrl}
             alt="User avatar"
             className={`rounded-full object-cover ${sizeClass} ${className}`}
             onError={(e) => {

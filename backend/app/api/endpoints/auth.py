@@ -1,5 +1,5 @@
 from starlette import status
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, UploadFile, File, Form
 from app.schemas.user import UserRegistration
 from app.schemas.auth import UserLogin, Token
 from app.db.models import Users
@@ -13,9 +13,15 @@ from app.core.security import (
     refresh_tokens,
 )
 from fastapi.responses import JSONResponse
+import os
+import uuid
+from pathlib import Path 
+import shutil
 
 router = APIRouter()
 
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)  # создаем папку, если её нет
 
 @router.post("/auth", response_model=Token)
 async def authenticate_user(
@@ -95,23 +101,42 @@ async def refreshTokens(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный токен"
         )
 
-
 @router.post("/registration", response_model=Token)
 async def registration_user(
-    userRegistration: UserRegistration, db: Session = Depends(get_db)
+    username: str = Form(None),
+    mail: str = Form(None),
+    password: str = Form(None),
+    admin: bool = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
 ):
-    new_user = Users(
-        username=userRegistration.username,
-        mail=userRegistration.mail,
-        password=get_password_hash(userRegistration.password),
-        admin=userRegistration.admin,
-    )
-    user_check = db.query(Users).filter(Users.mail == userRegistration.mail).first()
+    user_check = db.query(Users).filter(Users.mail == mail).first()
     if user_check:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пользователь с такой почтой уже существует",
         )
+
+    photo_path = None
+    if image and mail:
+        # Сохраняем файл на диск
+        # Генерируем уникальное имя файла
+        file_extension = os.path.splitext(mail)[1]
+        safe_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = UPLOAD_DIR / safe_filename
+        # Сохраняем файл
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+        photo_path = str(file_path)
+
+    new_user = Users(
+        username=username,
+        mail=mail,
+        password=get_password_hash(password),
+        admin=admin,
+        photo=photo_path
+    )
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

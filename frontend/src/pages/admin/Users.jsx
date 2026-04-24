@@ -1,5 +1,5 @@
 import Avatar from "../../Components/Avatar.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../../api/api.js";
 import { toast } from "react-toastify";
 import Spiner from "../../Components/Spiner.jsx";
@@ -9,8 +9,9 @@ import { useForm } from "react-hook-form";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import { useSearchParams } from "react-router-dom";
-import { RadioGroup } from "@headlessui/react";
-import { Button } from "@headlessui/react";
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
 export default function Users() {
     const PER_PAGE_OPTIONS = [
         { value: 5, label: "5 записей" },
@@ -42,6 +43,17 @@ export default function Users() {
     const [currentUserId, setCurrentUserId] = useState(null);
     const [mailFree, setMailFree] = useState(true);
 
+    // Состояния для аватарки
+    const [avatarPreviewBase64, setAvatarPreviewBase64] = useState(null);
+    const [avatarBlob, setAvatarBlob] = useState(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [imgSrc, setImgSrc] = useState(null);
+    const [crop, setCrop] = useState({ unit: '%', width: 50, height: 50, aspect: 1 });
+    const [completedCrop, setCompletedCrop] = useState(null);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const imageRef = useRef(null);
+    const fileInputRef = useRef(null);
+
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = parseInt(searchParams.get("page")) || 1;
 
@@ -53,7 +65,8 @@ export default function Users() {
         handleSubmit,
         formState: { errors },
         reset,
-        setValue
+        setValue,
+        watch
     } = useForm({
         mode: "onTouched",
         defaultValues: {
@@ -104,6 +117,8 @@ export default function Users() {
             password: '',
             admin: false
         });
+        setAvatarPreviewBase64(null);
+        setAvatarBlob(null);
         setIsModalOpen(true);
     };
 
@@ -113,12 +128,10 @@ export default function Users() {
 
         setValue('username', user.username);
         setValue('mail', user.mail);
+        setValue('admin', user.admin === null ? "null" : String(user.admin));
 
-        // 👇 ключевая строка
-        setValue(
-            'admin',
-            user.admin === null ? "null" : String(user.admin)
-        );
+        setAvatarPreviewBase64(user.photo || null);
+        setAvatarBlob(null);
 
         setIsModalOpen(true);
     };
@@ -135,29 +148,191 @@ export default function Users() {
         }
     };
 
-    const onSubmit = async (data) => {
-        try {
-            // 👇 приводим к нормальному виду
-            const normalizedData = {
-                ...data,
-                admin:
-                    data.admin === "null"
-                        ? null
-                        : data.admin === "true"
-            };
+    const handleAvatarClick = () => {
+        fileInputRef.current.click();
+    };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error("Пожалуйста, выберите изображение");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Файл не должен превышать 5 МБ");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setImgSrc(reader.result);
+            setShowCropModal(true);
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    };
+
+    // Автоматический максимальный квадратный кроп (в процентах)
+    useEffect(() => {
+        if (!imgSrc || !imageRef.current) return;
+        const img = imageRef.current;
+        const onImageLoad = () => {
+            const { naturalWidth, naturalHeight } = img;
+            if (!naturalWidth || !naturalHeight) return;
+            const size = Math.min(naturalWidth, naturalHeight);
+            const widthPercent = (size / naturalWidth) * 100;
+            const heightPercent = (size / naturalHeight) * 100;
+            const xPercent = ((naturalWidth - size) / 2 / naturalWidth) * 100;
+            const yPercent = ((naturalHeight - size) / 2 / naturalHeight) * 100;
+
+            const newCrop = {
+                unit: '%',
+                x: xPercent,
+                y: yPercent,
+                width: widthPercent,
+                height: heightPercent,
+                aspect: 1,
+            };
+            setCrop(newCrop);
+            setCompletedCrop(newCrop);
+        };
+        if (img.complete && img.naturalWidth > 0) {
+            onImageLoad();
+        } else {
+            img.addEventListener('load', onImageLoad);
+            return () => img.removeEventListener('load', onImageLoad);
+        }
+    }, [imgSrc]);
+
+    // ✅ Универсальная обрезка с поддержкой % и px
+    const getCroppedBlob = async () => {
+        if (!completedCrop || !imageRef.current) return null;
+        const image = imageRef.current;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const naturalWidth = image.naturalWidth;
+        const naturalHeight = image.naturalHeight;
+        const displayedWidth = image.width;
+        const displayedHeight = image.height;
+
+        let cropX = completedCrop.x;
+        let cropY = completedCrop.y;
+        let cropWidth = completedCrop.width;
+        let cropHeight = completedCrop.height;
+
+        console.log('Исходный completedCrop:', completedCrop);
+        console.log(`natural: ${naturalWidth}x${naturalHeight}, displayed: ${displayedWidth}x${displayedHeight}`);
+
+        if (completedCrop.unit === '%') {
+            // Преобразуем проценты в пиксели относительно натурального размера
+            cropX = (cropX / 100) * naturalWidth;
+            cropY = (cropY / 100) * naturalHeight;
+            cropWidth = (cropWidth / 100) * naturalWidth;
+            cropHeight = (cropHeight / 100) * naturalHeight;
+        } else {
+            // Если единица 'px' – координаты даны относительно отображаемого размера
+            const scaleX = naturalWidth / displayedWidth;
+            const scaleY = naturalHeight / displayedHeight;
+            cropX = cropX * scaleX;
+            cropY = cropY * scaleY;
+            cropWidth = cropWidth * scaleX;
+            cropHeight = cropHeight * scaleY;
+        }
+
+        // Округляем, чтобы избежать полупикселей
+        cropX = Math.round(cropX);
+        cropY = Math.round(cropY);
+        cropWidth = Math.round(cropWidth);
+        cropHeight = Math.round(cropHeight);
+
+        console.log(`Обрезаемая область после пересчёта: x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
+
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+        ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+        });
+    };
+
+    const blobToBase64 = (blob) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    const handleSaveCrop = async () => {
+        const blob = await getCroppedBlob();
+        if (!blob) {
+            toast.error("Не удалось обрезать изображение");
+            return;
+        }
+        setIsUploadingAvatar(true);
+        try {
+            const base64 = await blobToBase64(blob);
+            setAvatarPreviewBase64(base64);
+            setAvatarBlob(blob);
+            setShowCropModal(false);
+            setImgSrc(null);
+            setCompletedCrop(null);
+        } catch (err) {
+            console.error(err);
+            toast.error("Ошибка при обработке изображения");
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
+    const closeCropModal = () => {
+        setShowCropModal(false);
+        setImgSrc(null);
+        setCompletedCrop(null);
+    };
+
+    const onSubmit = async (data) => {
+        const normalizedData = {
+            username: data.username,
+            mail: data.mail,
+            admin: data.admin === "null" ? null : (data.admin === "true"),
+            password: data.password || undefined
+        };
+
+        const formData = new FormData();
+        formData.append('id', currentUserId);
+        formData.append('username', normalizedData.username);
+        formData.append('mail', normalizedData.mail);
+        formData.append('admin', normalizedData.admin === null ? 'null' : normalizedData.admin);
+        if (normalizedData.password) {
+            formData.append('password', normalizedData.password);
+        }
+        if (avatarBlob) {
+            formData.append('image', avatarBlob, 'avatar.jpg');
+        }
+        console.info(formData)
+        try {
             if (isCreating && mailFree) {
-                await api.postRegister(normalizedData);
+                await api.postRegister(formData);
                 toast.success("Пользователь создан");
+            } else if (!isCreating) {
+                await api.updateUser(formData);
+                toast.success("Пользователь обновлён");
             } else {
-                await api.updateUser({ ...normalizedData, id: currentUserId });
-                toast.success("Пользователь обновлен");
+                toast.error("Почта уже занята");
+                return;
             }
 
             setIsModalOpen(false);
+            setAvatarPreviewBase64(null);
+            setAvatarBlob(null);
             fetchUsers(currentPage, perPage, sortParam);
         } catch (error) {
-            toast.error(error.response?.data?.detail || "Ошибка");
+            toast.error(error.response?.data?.detail || "Ошибка при сохранении");
         }
     };
 
@@ -178,9 +353,10 @@ export default function Users() {
     };
 
     useEffect(() => {
-        const timer = setTimeout(() => 
-            {fetchUsers(currentPage, perPage, sortParam)},
-            100);      
+        const timer = setTimeout(() => {
+            fetchUsers(currentPage, perPage, sortParam);
+        }, 100);
+        return () => clearTimeout(timer);
     }, [currentPage, sortParam, perPage]);
 
     useEffect(() => {
@@ -202,11 +378,11 @@ export default function Users() {
                     <div className="p-6 text-gray-900">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                            <h1 className="text-2xl font-bold dark:text-gray-200">Список пользователей</h1>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                <h1 className="text-2xl font-bold dark:text-gray-200">Список пользователей</h1>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
                                     Всего: {usersData.total} пользователей
                                 </span>
-                                <br/>
+                                <br />
                                 <div className="flex gap-2 mt-2 flex-wrap">
                                     <select
                                         value={sortParam}
@@ -214,9 +390,7 @@ export default function Users() {
                                         className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
                                         {SORT_OPTIONS.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>
-                                                {opt.label}
-                                            </option>
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                     <select
@@ -225,31 +399,20 @@ export default function Users() {
                                         className="p-2 mt-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
                                         {PER_PAGE_OPTIONS.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>
-                                                {opt.label}
-                                            </option>
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 me-3">
-
                                 <button
                                     onClick={handleCreateClick}
                                     className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-5 w-5 flex-shrink-0"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                              d="M12 4v16m8-8H4"/>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
-                                    <span
-                                        className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
+                                    <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
                                         Добавить пользователя
                                     </span>
                                 </button>
@@ -257,86 +420,42 @@ export default function Users() {
                         </div>
 
                         {loading ? (
-                            <Spiner/>
+                            <Spiner />
                         ) : (
                             <>
                                 {usersData.items && usersData.items.length > 0 ? (
                                     <div className="space-y-4">
                                         {usersData.items.map((user) => (
-                                            <div
-                                                key={user.id}
-                                                className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 transition-colors"
-                                            >
+                                            <div key={user.id} className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700 transition-colors">
                                                 <div className="flex-1 flex items-center gap-3">
-                                                    <Avatar email={user.mail} avatarUrl={user?.photo} size="md" className="me-2"/>
+                                                    <Avatar email={user.mail} avatarUrl={user?.photo} size="md" className="me-2" />
                                                     <div className="flex-1">
-                                                        <p className="text-lg font-medium text-gray-900 truncate dark:text-gray-200">
-                                                            {user.username}
-                                                        </p>
-                                                        <p className="text-sm text-gray-500 truncate dark:text-gray-400">
-                                                            {user.mail}
-                                                        </p>
+                                                        <p className="text-lg font-medium text-gray-900 truncate dark:text-gray-200">{user.username}</p>
+                                                        <p className="text-sm text-gray-500 truncate dark:text-gray-400">{user.mail}</p>
                                                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
+                                                            {user.admin ? 'Администратор' : user.admin === false ? 'Психолог' : "Клиент"}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Dropdown>
                                                         <Dropdown.Trigger>
-                                                            <button
-                                                                type="button"
-                                                                className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300"
-                                                            >
-                                                                <svg
-                                                                    className="h-full w-auto text-center m-0"
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    viewBox="0 0 20 20"
-                                                                    fill="currentColor"
-                                                                >
-                                                                    <path
-                                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"
-                                                                    />
+                                                            <button type="button" className="inline-flex justify-center items-center h-11 w-11 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm py-2.5 me-2 mb-2 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 dark:focus:ring-gray-800 transition-colors duration-300">
+                                                                <svg className="h-full w-auto text-center m-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
                                                                 </svg>
                                                             </button>
                                                         </Dropdown.Trigger>
-
                                                         <Dropdown.Content>
-                                                            <Dropdown.Link
-                                                                as="button"
-                                                                onClick={() => handleEditClick(user)}
-                                                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
-                                                            >
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    className="h-5 w-5 mr-2"
-                                                                    fill="none"
-                                                                    viewBox="0 0 24 24"
-                                                                    stroke="currentColor"
-                                                                >
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                            <Dropdown.Link as="button" onClick={() => handleEditClick(user)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                                 </svg>
                                                                 Изменить
                                                             </Dropdown.Link>
-
-                                                            <Dropdown.Link
-                                                                as="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(user.id);
-                                                                }}
-                                                                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
-                                                            >
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    className="h-5 w-5 mr-2"
-                                                                    fill="none"
-                                                                    viewBox="0 0 24 24"
-                                                                    stroke="currentColor"
-                                                                >
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                            <Dropdown.Link as="button" onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                                 </svg>
                                                                 Удалить
                                                             </Dropdown.Link>
@@ -345,16 +464,10 @@ export default function Users() {
                                                 </div>
                                             </div>
                                         ))}
-
-                                        <Pagination
-                                            currentPage={usersData.page}
-                                            totalPages={usersData.total_pages}
-                                            onPageChange={handlePageChange}
-                                        />
+                                        <Pagination currentPage={usersData.page} totalPages={usersData.total_pages} onPageChange={handlePageChange} />
                                     </div>
                                 ) : (
-                                    <p className="text-gray-500 dark:text-gray-400">Нет пользователей для
-                                        отображения</p>
+                                    <p className="text-gray-500 dark:text-gray-400">Нет пользователей для отображения</p>
                                 )}
                             </>
                         )}
@@ -362,7 +475,7 @@ export default function Users() {
                 </div>
             </div>
 
-            {/* Модальное окно */}
+            {/* Модальное окно создания/редактирования */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
@@ -371,44 +484,53 @@ export default function Users() {
                                 {isCreating ? 'Добавить нового пользователя' : 'Редактировать пользователя'}
                             </h2>
 
+                            <div className="flex justify-center mb-6">
+                                <div className="relative cursor-pointer group" onClick={handleAvatarClick}>
+                                    <Avatar
+                                        key={avatarPreviewBase64 || (isCreating ? 'new' : 'edit')}
+                                        email={watch('mail') || 'temp'}
+                                        avatarUrl={avatarPreviewBase64}
+                                        inEdit={avatarPreviewBase64?.startsWith("data")}
+                                        size="xxl"
+                                        className="rounded-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                        <span className="text-white text-sm font-medium">Изменить</span>
+                                    </div>
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept="image/jpeg,image/png,image/jpg"
+                                    className="hidden"
+                                />
+                            </div>
+
                             <form onSubmit={handleSubmit(onSubmit)}>
                                 <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Имя пользователя
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Имя пользователя</label>
                                     <input
                                         type="text"
-                                        {...register('username', {required: 'Обязательное поле'})}
+                                        {...register('username', { required: 'Обязательное поле' })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
-                                    {errors.username && (
-                                        <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.username.message}</p>
-                                    )}
+                                    {errors.username && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.username.message}</p>}
                                 </div>
 
                                 <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Email
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                                     <input
                                         type="email"
                                         {...register('mail', {
                                             required: 'Обязательное поле',
-                                            pattern: {
-                                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                                message: "Некорректный email"
-                                            }
+                                            pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Некорректный email" }
                                         })}
                                         onChange={handleMail}
-
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
-                                    {errors.mail && (
-                                        <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.mail.message}</p>
-                                    )}
-                                    {!mailFree && (
-                                        <p className="mt-1 text-sm text-red-600 dark:text-red-500">Эта почта занята!</p>
-                                    )}
+                                    {errors.mail && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.mail.message}</p>}
+                                    {!mailFree && <p className="mt-1 text-sm text-red-600 dark:text-red-500">Эта почта занята!</p>}
                                 </div>
 
                                 <div className="mb-4">
@@ -416,78 +538,55 @@ export default function Users() {
                                         {isCreating ? 'Пароль' : 'Новый пароль (оставьте пустым, чтобы не менять)'}
                                     </label>
                                     {isCreating ? (
-                                            <>
-                                                <TextInput
-                                                    id="password"
-                                                    type="password"
-                                                    {...register('password', {
-                                                        required: "Поле обязательно к заполнению",
-                                                        pattern: {
-                                                            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$|^$/,
-                                                            message: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и спецсимволы"
-                                                        }
-                                                    })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                                />
-                                                {errors.password && (
-                                                    <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.password.message}</p>
-                                                )}
-                                            </>)
-                                        :
-                                        (
-                                            <>
-                                                <input
-                                                    type="password"
-                                                    {...register('password', {
-                                                        pattern: {
-                                                            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/,
-                                                            message: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и спецсимволы"
-                                                        }
-                                                    })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                                />
-                                                {errors.password && (
-                                                    <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.password.message}</p>
-                                                )}
-                                            </>)}
+                                        <>
+                                            <TextInput
+                                                id="password"
+                                                type="password"
+                                                {...register('password', {
+                                                    required: "Поле обязательно к заполнению",
+                                                    pattern: {
+                                                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/,
+                                                        message: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и спецсимволы"
+                                                    }
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            />
+                                            {errors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.password.message}</p>}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <input
+                                                type="password"
+                                                {...register('password', {
+                                                    pattern: {
+                                                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/,
+                                                        message: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и спецсимволы"
+                                                    }
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            />
+                                            {errors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.password.message}</p>}
+                                        </>
+                                    )}
                                 </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Роль пользователя
-                                        </label>
 
-                                        <div className="space-y-2">
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="radio"
-                                                    value="true"
-                                                    {...register("admin")}
-                                                    className="h-4 w-4"
-                                                />
-                                                <label className="ml-2">Администратор</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="radio"
-                                                    value="false"
-                                                    {...register("admin")}
-                                                    className="h-4 w-4"
-                                                />
-                                                <label className="ml-2">Психолог</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="radio"
-                                                    value="null"
-                                                    {...register("admin")}
-                                                    className="h-4 w-4"
-                                                />
-                                                <label className="ml-2">Клиент</label>
-                                            </div>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Роль пользователя</label>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center">
+                                            <input type="radio" value="true" {...register("admin")} className="h-4 w-4" />
+                                            <label className="ml-2">Администратор</label>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <input type="radio" value="false" {...register("admin")} className="h-4 w-4" />
+                                            <label className="ml-2">Психолог</label>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <input type="radio" value="null" {...register("admin")} className="h-4 w-4" />
+                                            <label className="ml-2">Клиент</label>
                                         </div>
                                     </div>
+                                </div>
 
                                 <div className="flex justify-end space-x-3">
                                     <button
@@ -499,12 +598,41 @@ export default function Users() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                        disabled={(isCreating && !mailFree) || isUploadingAvatar}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                                     >
                                         {isCreating ? 'Зарегистрировать' : 'Сохранить'}
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Модальное окно кропа */}
+            {showCropModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-4">
+                        <h3 className="text-lg font-semibold mb-4">Обрезать аватар</h3>
+                        <div className="flex justify-center">
+                            {imgSrc && (
+                                <ReactCrop
+                                    crop={crop}
+                                    onChange={setCrop}
+                                    onComplete={setCompletedCrop}
+                                    aspect={1}
+                                    circularCrop={true}
+                                >
+                                    <img ref={imageRef} src={imgSrc} alt="Crop preview" style={{ maxHeight: '60vh', maxWidth: '100%' }} />
+                                </ReactCrop>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button onClick={closeCropModal} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400" disabled={isUploadingAvatar}>Отмена</button>
+                            <button onClick={handleSaveCrop} disabled={!completedCrop || isUploadingAvatar} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                                {isUploadingAvatar ? 'Обработка...' : 'Сохранить'}
+                            </button>
                         </div>
                     </div>
                 </div>

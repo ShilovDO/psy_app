@@ -1,5 +1,5 @@
 from starlette import status
-from fastapi import HTTPException, status, Request, Depends, APIRouter, UploadFile, File
+from fastapi import HTTPException, status, Request, Depends, APIRouter, UploadFile, File, Form
 from app.schemas.user import ID, User, FullUser, UsersResponse
 from app.db.models import Users, Routes, Stations, UsersRoutes
 from app.core.security import get_password_hash
@@ -18,10 +18,18 @@ router = APIRouter()
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)  # создаем папку, если её нет
 
-@router.post("/change_user")
-async def change_user(user: FullUser, db: Session = Depends(get_db)):
-    find_user = db.query(Users).filter(Users.id == user.id).first()
-    if find_user.admin and not user.admin:
+@router.post("/change_user/")
+async def change_user(
+    id: int = Form(None),
+    username: str = Form(None),
+    mail: str = Form(None),
+    password: str = Form(None),
+    admin: bool = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)):
+
+    find_user = db.query(Users).filter(Users.id == id).first()
+    if find_user.admin and not admin:
         find_admins = db.query(Users).filter(Users.admin == True).all()
         if len(find_admins) == 1:
             raise HTTPException(
@@ -30,8 +38,8 @@ async def change_user(user: FullUser, db: Session = Depends(get_db)):
             )
     check_user = (
         db.query(Users)
-        .filter(Users.mail == user.mail)
-        .filter(Users.id != user.id)
+        .filter(Users.mail == mail)
+        .filter(Users.id != id)
         .first()
     )
     if check_user:
@@ -39,12 +47,41 @@ async def change_user(user: FullUser, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пользователь с такой почтой уже существует",
         )
+
     if find_user:
-        find_user.username = user.username
-        find_user.mail = user.mail
-        if user.password:
-            find_user.password = get_password_hash(user.password)
-        find_user.admin = user.admin
+
+        if find_user.photo:
+            # Удаляем старый файл фото
+            old_photo_path = Path(find_user.photo)
+            if old_photo_path.exists():
+                try:
+                    old_photo_path.unlink()  # Удаляем файл
+                except Exception as e:
+                    # Логируем ошибку, но продолжаем выполнение
+                    print(f"Ошибка при удалении старого файла: {e}")
+
+        photo_path = None  # Сохраняем старый путь по умолчанию
+        if image and mail:
+            # Сохраняем файл на диск
+            # Генерируем уникальное имя файла
+            file_extension = os.path.splitext(image.filename)[1]  # Используем расширение загружаемого файла
+            safe_filename = f"{uuid.uuid4()}{file_extension}"
+            file_path = UPLOAD_DIR / safe_filename
+            
+            # Убеждаемся, что директория существует
+            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            
+            # Сохраняем файл
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(image.file, buffer)
+            photo_path = str(file_path)
+
+        find_user.username = username
+        find_user.mail = mail
+        find_user.photo = photo_path
+        if password:
+            find_user.password = get_password_hash(password)
+        find_user.admin = admin
         db.commit()
         db.refresh(find_user)
         return {
@@ -140,7 +177,7 @@ async def all_users(
     users_list = [User(**user.__dict__) for user in users]
 
     return {
-        "items": users_list,
+        "items": items,
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -250,11 +287,27 @@ async def addProduct(
         user_id = request.state.user.id
         find_user = db.query(Users).filter(Users.id == user_id).first()
         if find_user:
+            # Проверяем и удаляем старое фото, если оно существует
+            if find_user.photo:
+                old_photo_path = Path(find_user.photo)
+                if old_photo_path.exists():
+                    try:
+                        old_photo_path.unlink()
+                        print(f"Старое фото удалено: {old_photo_path}")
+                    except Exception as e:
+                        print(f"Ошибка при удалении старого файла: {e}")
+                        # Продолжаем выполнение, даже если не удалось удалить старый файл
+
             # 1. Сохраняем файл на диск
-            # Генерируем уникальное имя файла
-            file_extension = os.path.splitext(find_user.mail)[1]
+            # Генерируем уникальное имя файла (используем расширение из загружаемого файла)
+            file_extension = os.path.splitext(image.filename)[1]
             safe_filename = f"{uuid.uuid4()}{file_extension}"
+            
+            # Убеждаемся, что директория существует
+            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            
             file_path = UPLOAD_DIR / safe_filename
+            
             # Сохраняем файл
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(image.file, buffer)
@@ -278,7 +331,7 @@ async def addProduct(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
             )
     except HTTPException:
-        raise
+        raise  # Пробрасываем HTTPException дальше
     except Exception as e:
         db.rollback()
         print(f"Error: {str(e)}")
