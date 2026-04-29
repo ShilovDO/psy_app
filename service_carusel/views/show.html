@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карусель комиксов</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+        
+        .carousel-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .page-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin: 0;
+        }
+        
+        .carousel-item {
+            text-align: center;
+        }
+        
+        .carousel-item img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+        }
+        
+        .carousel-item .description {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #555;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            filter: invert(100%);
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 20px;
+        }
+        
+        #carouselCounter {
+            font-size: 16px;
+            color: #666;
+            margin-top: 15px;
+        }
+        
+        .completion-message {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .completion-message h2 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+        
+        .completion-message p {
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            display: none;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Заголовок страницы -->
+        <div id="pageHeader" class="page-header">
+            <h1 id="configTitle">Загрузка...</h1>
+        </div>
+        
+        <!-- Карусель -->
+        <div id="carouselContainer" class="carousel-container">
+            <div id="carousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
+                <div class="carousel-inner" id="carouselInner"></div>
+                
+                <button class="carousel-control-prev" type="button" data-bs-target="#carousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                    <span class="visually-hidden">Предыдущее</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                    <span class="visually-hidden">Следующее</span>
+                </button>
+                
+                <!-- Счётчик -->
+                <div id="carouselCounter" class="text-center mt-2"></div>
+            </div>
+        </div>
+        
+        <!-- Сообщение о завершении -->
+        <div id="completionMessage" class="completion-message">
+            <h2>🎉 Спасибо за просмотр!</h2>
+            <p>Вы просмотрели все изображения.</p>
+        </div>
+    </div>
+    
+    <!-- Отладочная информация -->
+    <div id="debugInfo" class="debug-info"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Глобальные переменные
+        let currentSlideIndex = 0;
+        let totalSlides = 0;
+        let slideTimers = {};
+        let slideStartTime = null;
+        let currentImageName = null;
+        let completionSent = false;
+        
+        // Получаем ВСЕ параметры из URL (как в старой версии)
+        const urlParams = new URLSearchParams(window.location.search);
+        const platformId = urlParams.get('id'); // основной ID, его и используем как result_id
+        
+        // Дополнительные параметры (могут быть или не быть)
+        const userId = urlParams.get('user') || '0';
+        const stationId = urlParams.get('station') || '0';
+        const routeId = urlParams.get('route') || '0';
+        
+        // Для отладки
+        function updateDebugInfo(text) {
+            const debugDiv = document.getElementById('debugInfo');
+            if (debugDiv) {
+                debugDiv.textContent = 'ID: ' + platformId + ' | ' + text;
+                debugDiv.style.display = 'block';
+            }
+        }
+        
+        // Начинаем отсчет времени для текущего слайда
+        function startSlideTimer(imageName) {
+            if (currentImageName && slideStartTime) {
+                const timeSpent = (Date.now() - slideStartTime) / 1000;
+                if (!slideTimers[currentImageName]) {
+                    slideTimers[currentImageName] = 0;
+                }
+                slideTimers[currentImageName] += timeSpent;
+                updateDebugInfo(`${currentImageName}: ${timeSpent.toFixed(1)}с`);
+            }
+            
+            currentImageName = imageName;
+            slideStartTime = Date.now();
+        }
+        
+        // Сохраняем результат на сервер
+        async function saveResult() {
+            if (completionSent) return;
+            
+            // Фиксируем время последнего слайда
+            if (currentImageName && slideStartTime) {
+                const timeSpent = (Date.now() - slideStartTime) / 1000;
+                if (!slideTimers[currentImageName]) {
+                    slideTimers[currentImageName] = 0;
+                }
+                slideTimers[currentImageName] += timeSpent;
+            }
+            
+            // Используем platformId как основной ID результата
+            const resultData = {
+                id: platformId,
+                user: userId,
+                station: stationId,
+                route: routeId,
+                config: platformId,
+                date: new Date().toISOString(),
+                timers: slideTimers
+            };
+            
+            console.log('Отправляемые данные:', resultData);
+            updateDebugInfo('Сохранение...');
+            
+            try {
+                const response = await fetch('/api/result_save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(resultData)
+                });
+                
+                const responseText = await response.text();
+                console.log('Ответ сервера:', responseText);
+                
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error('Сервер вернул не JSON');
+                }
+                
+                if (response.ok && responseData.success) {
+                    console.log('✓ Результаты сохранены');
+                    updateDebugInfo('✓ Сохранено');
+                    completionSent = true;
+                } else {
+                    console.error('✗ Ошибка:', responseData.error);
+                    updateDebugInfo('✗ ' + (responseData.error || 'Ошибка'));
+                }
+            } catch (error) {
+                console.error('✗ Ошибка:', error);
+                updateDebugInfo('✗ ' + error.message);
+            }
+        }
+        
+        // Инициализация карусели
+        async function initCarousel() {
+            try {
+                // Загружаем конфигурацию для заголовка
+                if (platformId && platformId !== 'undefined') {
+                    try {
+                        const configRes = await fetch(`/api/config/${platformId}`);
+                        if (configRes.ok) {
+                            const configData = await configRes.json();
+                            if (configData.success && configData.data && configData.data.test) {
+                                document.getElementById('configTitle').textContent = configData.data.test;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Ошибка загрузки заголовка:', error);
+                        document.getElementById('configTitle').textContent = 'Карусель комиксов';
+                    }
+                }
+                
+                // Загружаем комиксы
+                const comicsRes = await fetch(`/api/config/${platformId}`);
+                if (!comicsRes.ok) {
+                    throw new Error('Не удалось загрузить комиксы');
+                }
+                
+                const comicsData = await comicsRes.json();
+                
+                if (!comicsData.success || !comicsData.data || !comicsData.data.comics) {
+                    throw new Error('Нет данных о комиксах');
+                }
+                
+                const comics = comicsData.data.comics;
+                totalSlides = comics.length;
+                
+                const inner = document.getElementById('carouselInner');
+                inner.innerHTML = '';
+                
+                // Создаем слайды
+                comics.forEach((comic, i) => {
+                    const item = document.createElement('div');
+                    item.className = `carousel-item ${i === 0 ? 'active' : ''}`;
+                    
+                    const image = document.createElement('img');
+                    image.src = `/images/${comic.image}`;
+                    image.className = 'd-block w-100';
+                    image.alt = `Изображение ${i + 1}`;
+                    
+                    item.appendChild(image);
+                    
+                    // Добавляем описание если есть
+                    if (comic.description) {
+                        const desc = document.createElement('div');
+                        desc.className = 'description';
+                        desc.textContent = comic.description;
+                        item.appendChild(desc);
+                    }
+                    
+                    inner.appendChild(item);
+                });
+                
+                // Обновляем счетчик
+                updateCounter();
+                
+                // Запускаем таймер для первого слайда
+                if (comics.length > 0) {
+                    startSlideTimer(comics[0].image);
+                }
+                
+                // Отслеживаем смену слайда
+                const carouselEl = document.getElementById('carousel');
+                
+                carouselEl.addEventListener('slide.bs.carousel', function(e) {
+                    // Сохраняем время текущего слайда перед переходом
+                    if (currentImageName && slideStartTime) {
+                        const timeSpent = (Date.now() - slideStartTime) / 1000;
+                        if (!slideTimers[currentImageName]) {
+                            slideTimers[currentImageName] = 0;
+                        }
+                        slideTimers[currentImageName] += timeSpent;
+                    }
+                    
+                    // Получаем индекс нового слайда
+                    currentSlideIndex = e.to;
+                    
+                    // Запускаем таймер для нового слайда
+                    if (comics[currentSlideIndex]) {
+                        startSlideTimer(comics[currentSlideIndex].image);
+                    }
+                    
+                    updateCounter();
+                });
+                
+                // Проверка на последний слайд
+                carouselEl.addEventListener('slid.bs.carousel', function(e) {
+                    if (currentSlideIndex === totalSlides - 1 && !completionSent) {
+                        // Показываем кнопку завершения через 3 секунды
+                        setTimeout(() => {
+                            if (!completionSent) {
+                                showFinishButton();
+                            }
+                        }, 3000);
+                    }
+                });
+                
+                updateDebugInfo('Карусель готова');
+                
+            } catch (error) {
+                console.error('Ошибка инициализации карусели:', error);
+                document.getElementById('configTitle').textContent = 'Ошибка загрузки';
+                document.getElementById('carouselInner').innerHTML = `
+                    <div class="carousel-item active">
+                        <div class="alert alert-danger">
+                            Не удалось загрузить изображения. Пожалуйста, попробуйте позже.
+                        </div>
+                    </div>
+                `;
+                updateDebugInfo('Ошибка загрузки');
+            }
+        }
+        
+        // Обновление счетчика
+        function updateCounter() {
+            const counter = document.getElementById('carouselCounter');
+            if (counter && totalSlides > 0) {
+                counter.textContent = `${currentSlideIndex + 1} / ${totalSlides}`;
+            }
+        }
+        
+        // Показать кнопку завершения
+        function showFinishButton() {
+            // Удаляем старую кнопку если есть
+            const oldBtn = document.getElementById('finishBtn');
+            if (oldBtn) oldBtn.remove();
+            
+            const container = document.querySelector('.carousel-container');
+            if (container) {
+                const btnDiv = document.createElement('div');
+                btnDiv.className = 'text-center mt-3';
+                btnDiv.innerHTML = `
+                    <button id="finishBtn" class="btn btn-primary btn-lg">
+                        Завершить просмотр и сохранить результаты
+                    </button>
+                `;
+                container.appendChild(btnDiv);
+                
+                document.getElementById('finishBtn').addEventListener('click', function() {
+                    document.getElementById('carouselContainer').style.display = 'none';
+                    document.getElementById('completionMessage').style.display = 'block';
+                    saveResult();
+                });
+            }
+        }
+        
+        // Сохраняем результаты при закрытии страницы
+        window.addEventListener('beforeunload', function() {
+            if (!completionSent) {
+                if (currentImageName && slideStartTime) {
+                    const timeSpent = (Date.now() - slideStartTime) / 1000;
+                    if (!slideTimers[currentImageName]) {
+                        slideTimers[currentImageName] = 0;
+                    }
+                    slideTimers[currentImageName] += timeSpent;
+                }
+                
+                const resultData = {
+                    id: platformId,
+                    user: userId,
+                    station: stationId,
+                    route: routeId,
+                    config: platformId,
+                    date: new Date().toISOString(),
+                    timers: slideTimers
+                };
+                
+                navigator.sendBeacon('/api/result_save', JSON.stringify(resultData));
+            }
+        });
+        
+        // Запуск при загрузке
+        document.addEventListener('DOMContentLoaded', initCarousel);
+    </script>
+</body>
+</html>

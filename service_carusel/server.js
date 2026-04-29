@@ -27,15 +27,19 @@ app.use(express.json());
 
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views/index.html'));
+    res.sendFile(path.join(__dirname, 'views/show.html'));
 });
 
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/admin.html'));
 });
 
+app.get('/settings', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views/settings.html'));
+});
+
 app.get('/config', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views/config.html'));
+    res.sendFile(path.join(__dirname, 'views/settings.html'));
 });
 
 app.use('/images', express.static(IMAGES_DIR, {
@@ -43,6 +47,7 @@ app.use('/images', express.static(IMAGES_DIR, {
         res.set('Cache-Control', 'no-store');
     }
 }));
+
 app.get('/result', (req, res) => {
     res.sendFile(path.join(__dirname, 'views/result.html'));
 });
@@ -60,36 +65,90 @@ app.post('/api/set_result', (req, res) => {
 });
 
 
-// Запись результата при закрытии приложения (POST)
+// Эндпоинт для сохранения результатов просмотра
 app.post('/api/result_save', async (req, res) => {
     try {
-        const {
-            id,
-            user,
-            station,
-            route,
-            config,
-            date
-        } = req.body; // теперь данные из тела запроса
+        const { id, user, station, route, config, date, timers } = req.body;
 
-        if (!id || !user || !station || !route || !config || !date) {
-            return res.status(400).send('Недостаточно параметров');
+        console.log('Получены данные для сохранения:', { id, user, station, route, config, date });
+
+        // Проверяем обязательные поля
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                error: 'Отсутствует id'
+            });
         }
 
-        await db.query(
-            `
-            INSERT INTO schema_comics.results
-            (id, "user", station, route, config, date_time, result)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            `,
-            [id, user, station, route, config, date, currentResult]
-        );
+        // Преобразуем в числа
+        const numericId = parseInt(id);
+        const numericUser = parseInt(user) || 0;
+        const numericStation = parseInt(station) || 0;
+        const numericRoute = parseInt(route) || 0;
+        const numericConfig = parseInt(config) || 0;
 
-        res.sendStatus(200);
+        if (isNaN(numericId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'id должен быть числом'
+            });
+        }
 
-    } catch (e) {
-        console.error('Ошибка записи результата:', e);
-        res.sendStatus(500);
+        try {
+            // Основной результат
+            await db.query(`
+                INSERT INTO schema_comics.results (id, "user", station, route, config, date_time, result)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id) DO UPDATE 
+                SET "user" = $2, station = $3, route = $4, config = $5, date_time = $6
+            `, [
+                numericId,
+                numericUser,
+                numericStation,
+                numericRoute,
+                numericConfig,
+                date || new Date().toISOString(),
+                '0'
+            ]);
+
+            console.log('Основной результат сохранен');
+
+            // Таймеры для каждого изображения
+            if (timers && typeof timers === 'object') {
+                let savedCount = 0;
+                
+                for (const [imageName, timeSpent] of Object.entries(timers)) {
+                    const timeValue = parseFloat(timeSpent);
+                    if (timeValue > 0) {
+                        await db.query(`
+                            INSERT INTO schema_comics.images_time_result (result_id, image, time)
+                            VALUES ($1, $2, $3)
+                        `, [numericId, imageName, timeValue]);
+                        savedCount++;
+                    }
+                }
+                
+                console.log(`Сохранено ${savedCount} записей времени`);
+            }
+
+            res.json({
+                success: true,
+                message: 'OK'
+            });
+            
+        } catch (dbError) {
+            console.error('Ошибка БД:', dbError);
+            res.status(500).json({
+                success: false,
+                error: 'Ошибка базы данных: ' + dbError.message
+            });
+        }
+    } catch (error) {
+        console.error('Общая ошибка:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Внутренняя ошибка сервера'
+        });
     }
 });
 
@@ -136,22 +195,62 @@ app.get('/api/results/:id', async (req, res) => {
     }
 });
 
-// Эндпоинт для сохранения конфигурации
-app.post('/api/config/save', async (req, res) => {
+// Эндпоинт для сохранения конфигурации с изображениями
+app.post('/api/config/save', upload.array('images'), async (req, res) => {
     try {
-        const { platform_id, config_text } = req.body;
+        console.log('Получены данные:', {
+            body: req.body,
+            files: req.files ? req.files.length : 0
+        });
+
+        const { platform_id, config_text, comics_data } = req.body;
+        const uploadedFiles = req.files || [];
 
         // Валидация входных данных
-        if (!platform_id || !config_text) {
+        if (!platform_id) {
             return res.status(400).json({
                 success: false,
-                error: 'Необходимы platform_id и config_text'
+                error: 'Необходим platform_id'
             });
         }
 
-        // Сохраняем или обновляем конфигурацию
-        // Используем UPSERT (INSERT ... ON CONFLICT ...)
-        const saveQuery = `
+        if (!config_text) {
+            return res.status(400).json({
+                success: false,
+                error: 'Необходим config_text'
+            });
+        }
+
+        // Парсим comics_data если он приходит как JSON строка
+        let comicsData = [];
+        if (comics_data) {
+            try {
+                if (typeof comics_data === 'string') {
+                    comicsData = JSON.parse(comics_data);
+                } else if (Array.isArray(comics_data)) {
+                    comicsData = comics_data;
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'comics_data должен быть массивом'
+                    });
+                }
+            } catch (e) {
+                console.error('Ошибка парсинга comics_data:', e);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Неверный формат comics_data: ' + e.message
+                });
+            }
+        }
+
+        // 1. Получаем старые записи комиксов ДО удаления
+        const oldComicsQuery = 'SELECT * FROM schema_comics.comics WHERE id = $1';
+        const oldComicsResult = await db.query(oldComicsQuery, [platform_id]);
+        const oldImages = oldComicsResult.rows.map(row => row.image);
+
+        // 2. Сохраняем или обновляем конфигурацию
+        const saveConfigQuery = `
             INSERT INTO schema_comics.configs (id, test) 
             VALUES ($1, $2)
             ON CONFLICT (id) 
@@ -160,16 +259,131 @@ app.post('/api/config/save', async (req, res) => {
             RETURNING *
         `;
 
-        const result = await db.query(saveQuery, [platform_id, config_text]);
+        const configResult = await db.query(saveConfigQuery, [platform_id, config_text]);
+        console.log('Конфигурация сохранена:', configResult.rows[0]);
+
+        // 3. Обрабатываем изображения и данные комиксов
+        // Сохраняем новые загруженные файлы
+        const savedImages = [];
+        
+        for (let i = 0; i < uploadedFiles.length; i++) {
+            const file = uploadedFiles[i];
+            const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}.webp`;
+            const newPath = path.join(IMAGES_DIR, uniqueName);
+            
+            try {
+                fs.renameSync(file.path, newPath);
+                console.log(`Файл сохранен: ${uniqueName}`);
+                
+                savedImages.push({
+                    index: i,
+                    filename: uniqueName,
+                    newPath: newPath
+                });
+            } catch (fileError) {
+                console.error(`Ошибка сохранения файла ${i}:`, fileError);
+                throw new Error(`Ошибка сохранения файла: ${fileError.message}`);
+            }
+        }
+
+        // 4. Собираем список новых имен файлов из comicsData
+        const newImageNames = [];
+        comicsData.forEach(comic => {
+            if (comic.image && typeof comic.image === 'string') {
+                newImageNames.push(comic.image);
+            }
+        });
+
+        // 5. Удаляем неиспользуемые файлы изображений
+        for (const oldImage of oldImages) {
+            // Проверяем, используется ли старое изображение в новых данных
+            if (!newImageNames.includes(oldImage)) {
+                const oldFilePath = path.join(IMAGES_DIR, oldImage);
+                try {
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                        console.log(`Удален неиспользуемый файл: ${oldImage}`);
+                    }
+                } catch (fileError) {
+                    console.error(`Ошибка удаления файла ${oldImage}:`, fileError);
+                }
+            }
+        }
+
+        // 6. Удаляем старые записи комиксов
+        const deleteOldComicsQuery = `
+            DELETE FROM schema_comics.comics 
+            WHERE id = $1
+        `;
+        await db.query(deleteOldComicsQuery, [platform_id]);
+        console.log('Старые комиксы удалены');
+
+        // 7. Вставляем новые записи комиксов
+        const insertComicsQuery = `
+            INSERT INTO schema_comics.comics (id, image, "order", description) 
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+
+        let savedImageIndex = 0;
+        
+        for (let i = 0; i < comicsData.length; i++) {
+            const comic = comicsData[i];
+            
+            let imageFilename = null;
+            
+            if (comic.image === null && savedImageIndex < savedImages.length) {
+                // Это новый загруженный файл
+                imageFilename = savedImages[savedImageIndex].filename;
+                savedImageIndex++;
+            } else if (comic.image && typeof comic.image === 'string') {
+                // Это существующее имя файла
+                imageFilename = comic.image;
+            }
+
+            if (imageFilename) {
+                await db.query(insertComicsQuery, [
+                    platform_id,
+                    imageFilename,
+                    comic.order || i,
+                    comic.description || ''
+                ]);
+                console.log(`Комикс ${i} сохранен:`, { 
+                    image: imageFilename, 
+                    order: comic.order, 
+                    description: comic.description 
+                });
+            }
+        }
+
+        console.log('Все данные успешно сохранены');
 
         res.json({
             success: true,
-            message: 'Конфигурация сохранена',
-            data: result.rows[0]
+            message: 'Конфигурация и комиксы сохранены',
+            data: {
+                config: configResult.rows[0],
+                images_count: uploadedFiles.length,
+                comics_count: comicsData.length
+            }
         });
 
     } catch (error) {
         console.error('Ошибка сохранения конфигурации:', error);
+        
+        // Удаляем уже сохраненные файлы в случае ошибки
+        if (req.files) {
+            req.files.forEach(file => {
+                try {
+                    if (fs.existsSync(file.path)) {
+                        fs.unlinkSync(file.path);
+                    }
+                } catch (cleanupError) {
+                    console.error('Ошибка очистки файлов:', cleanupError);
+                }
+            });
+        }
+
         res.status(500).json({
             success: false,
             error: 'Внутренняя ошибка сервера',
@@ -179,43 +393,41 @@ app.post('/api/config/save', async (req, res) => {
 });
 
 // Эндпоинт для получения конфигурации
-app.get('/api/config/:platform_id', async (req, res) => {
+app.get('/api/config/:id', async (req, res) => {
     try {
-        const { platform_id } = req.params;
+        const { id } = req.params;
         
-        const result = await db.query(
-            'SELECT * FROM schema_comics.configs WHERE id = $1',
-            [platform_id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Конфигурация не найдена'
-            });
-        }
-
-        if (result.rows[0] == null) {
+        // Получаем конфигурацию
+        const configQuery = 'SELECT * FROM schema_comics.configs WHERE id = $1';
+        const configResult = await db.query(configQuery, [id]);
+        
+        if (configResult.rows.length === 0) {
             return res.json({
                 success: true,
                 data: {
-                    id: row.id,
-                    result: null
-                },
-                message: 'Результат ещё не установлен'
+                    test: '',
+                    comics: []
+                }
             });
         }
-
+        
+        // Получаем комиксы
+        const comicsQuery = 'SELECT * FROM schema_comics.comics WHERE id = $1 ORDER BY "order"';
+        const comicsResult = await db.query(comicsQuery, [id]);
+        
         res.json({
             success: true,
-            data: result.rows[0]
+            data: {
+                ...configResult.rows[0],
+                comics: comicsResult.rows
+            }
         });
-
+        
     } catch (error) {
         console.error('Ошибка получения конфигурации:', error);
         res.status(500).json({
             success: false,
-            error: 'Внутренняя ошибка сервера'
+            error: 'Ошибка получения конфигурации'
         });
     }
 });
@@ -254,6 +466,7 @@ app.post('/api/upload', upload.array('images'), async (req, res) => {
         });
 
         res.sendStatus(200);
+        
     } catch (error) {
         console.error('Ошибка загрузки изображений:', error);
         res.sendStatus(500);
