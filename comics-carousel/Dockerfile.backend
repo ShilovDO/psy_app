@@ -7,7 +7,7 @@ WORKDIR /app
 COPY server/package*.json ./server/
 
 WORKDIR /app/server
-RUN npm ci --only=production
+RUN npm install
 
 WORKDIR /app
 COPY server ./server
