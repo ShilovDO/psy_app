@@ -59,10 +59,10 @@ async def currenUser(request: Request):
 
 
         image_base64 = None
-        if request.state.user.photo:
-            with open(request.state.user.photo, "rb") as img_file:
-                image_bytes = img_file.read()
-                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+        # if request.state.user.photo:
+        #     with open(request.state.user.photo, "rb") as img_file:
+        #         image_bytes = img_file.read()
+        #         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
         user_dict = {
             "id": request.state.user.id,
