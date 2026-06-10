@@ -12,28 +12,28 @@ services:
       - "80:80"  # Изменяем внешний порт фронтенда на 8080
     depends_on:
       - backend
-      - express
+  #     - express
 
-  caruselbackend:
-    build:
-      context: ./comics-carousel
-      dockerfile: Dockerfile.backend
-    container_name: comics_backend
-    ports:
-      - "3001:3001"
-    environment:
-      - PORT=3001
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/database_comics
-    restart: unless-stopped
+  # caruselbackend:
+  #   build:
+  #     context: ./comics-carousel
+  #     dockerfile: Dockerfile.backend
+  #   container_name: comics_backend
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - PORT=3001
+  #     - NODE_ENV=production
+  #     - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/database_comics
+  #   restart: unless-stopped
 
-  caruselfrontend:
-    build:
-      context: ./comics-carousel
-      dockerfile: Dockerfile.frontend
-    container_name: comics_frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - caruselbackend
-    restart: unless-stopped
+  # caruselfrontend:
+  #   build:
+  #     context: ./comics-carousel
+  #     dockerfile: Dockerfile.frontend
+  #   container_name: comics_frontend
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - caruselbackend
+  #   restart: unless-stopped
