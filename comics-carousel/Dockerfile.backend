@@ -1,29 +1,20 @@
+# Dockerfile.backend
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем package.json и устанавливаем зависимости
-COPY package*.json ./
+# Копируем package.json бэкенда
+COPY server/package*.json ./server/
+
+WORKDIR /app/server
 RUN npm install
 
-# Копируем ВСЕ файлы проекта
-COPY . .
+WORKDIR /app
+COPY server ./server
 
-# Проверяем что все файлы на месте
-RUN echo "=== Checking files ===" && \
-    ls -la /app/ && \
-    echo "=== Checking for server.js ===" && \
-    ls -la /app/server.js && \
-    echo "=== Checking public directory ===" && \
-    ls -la /app/public/ && \
-    echo "=== Current user ===" && \
-    whoami
-
-# Создаем папку для изображений
-RUN mkdir -p /app/public/images && \
-    chmod 755 /app/public/images
+# Устанавливаем переменную окружения для production
+ENV NODE_ENV=production
 
 EXPOSE 3001
 
-# ЯВНО указываем полный путь к файлу
-CMD ["node", "/app/server.js"]
+CMD ["node", "server/server.js"]
