@@ -18,7 +18,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: comics_frontend
     ports:
-      - "5003:80"
+      - "5088:80"
     depends_on:
       - carouselbackend
     restart: unless-stopped
