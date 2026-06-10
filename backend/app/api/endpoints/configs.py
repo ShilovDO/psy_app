@@ -13,7 +13,7 @@ router = APIRouter()
 async def create_config(
     config_data: NewConfig, request: Request, db: Session = Depends(get_db)
 ):
-    check_service = db.query(Services).filter(Services.id == config_data.service.id).first()
+    check_service = db.query(Services).filter(Services.id == config_data.service).first()
 
     if (check_service.available == False):
         raise HTTPException(
