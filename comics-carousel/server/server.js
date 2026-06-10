@@ -4,53 +4,144 @@ const path = require('path');
 const multer = require('multer');
 const cors = require('cors');
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const db = require('./db');
-const IMAGES_DIR = path.join(__dirname, 'public', 'images');
+
+// Используем абсолютные пути и создаем директорию если её нет
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const IMAGES_DIR = path.join(PUBLIC_DIR, 'images');
+
+// Создаем директорию для изображений, если её нет
+if (!fs.existsSync(IMAGES_DIR)) {
+    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    console.log('Created images directory:', IMAGES_DIR);
+}
 
 // Временное хранилище таймеров
 const tempTimersStorage = new Map();
 let currentResult = 0;
 const lastSlideResult = new Map();
 
-// Настройки Multer
+// Настройки Multer с проверкой прав
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, IMAGES_DIR),
-    filename: (req, file, cb) => cb(null, 'temp_' + Date.now() + path.extname(file.originalname))
+    destination: (req, file, cb) => {
+        // Проверяем существование директории
+        if (!fs.existsSync(IMAGES_DIR)) {
+            fs.mkdirSync(IMAGES_DIR, { recursive: true });
+        }
+        cb(null, IMAGES_DIR);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, 'temp_' + Date.now() + ext);
+    }
 });
-const upload = multer({ storage });
+
+const upload = multer({ 
+    storage,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB limit
+    }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Статические файлы с правильными путями
+app.use(express.static(PUBLIC_DIR));
 app.use('/images', express.static(IMAGES_DIR, {
-    setHeaders: (res) => {
-        res.set('Cache-Control', 'no-store');
+    setHeaders: (res, filePath) => {
+        // Отключаем кеширование для изображений
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        
+        // Устанавливаем правильный Content-Type
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeTypes = {
+            '.webp': 'image/webp',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif'
+        };
+        if (mimeTypes[ext]) {
+            res.set('Content-Type', mimeTypes[ext]);
+        }
     }
 }));
+
+// Логирование запросов к изображениям для отладки
+app.use('/images', (req, res, next) => {
+    console.log('Image request:', req.url);
+    const fullPath = path.join(IMAGES_DIR, req.url);
+    console.log('Full path:', fullPath);
+    if (fs.existsSync(fullPath)) {
+        console.log('File exists');
+    } else {
+        console.log('File NOT found');
+    }
+    next();
+});
 
 // ============================================
 // МАРШРУТЫ СТРАНИЦ
 // ============================================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.get('/settings', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'settings.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'settings.html'));
 });
 
 app.get('/config', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'settings.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'settings.html'));
 });
 
 app.get('/result', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'result.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'result.html'));
 });
 
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
+});
+
+// ============================================
+// API: HEALTH CHECK
+// ============================================
+
+app.get('/api/health', (req, res) => {
+    try {
+        const imagesCount = fs.existsSync(IMAGES_DIR) ? 
+            fs.readdirSync(IMAGES_DIR).filter(f => /\.(webp|jpg|jpeg|png|gif)$/i.test(f)).length : 0;
+        
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            node_version: process.version,
+            platform: process.platform,
+            directories: {
+                public: {
+                    path: PUBLIC_DIR,
+                    exists: fs.existsSync(PUBLIC_DIR)
+                },
+                images: {
+                    path: IMAGES_DIR,
+                    exists: fs.existsSync(IMAGES_DIR),
+                    writable: fs.existsSync(IMAGES_DIR) ? 
+                        fs.accessSync(IMAGES_DIR, fs.constants.W_OK) || true : false,
+                    imagesCount: imagesCount
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error.message
+        });
+    }
 });
 
 // ============================================
@@ -58,13 +149,27 @@ app.get('/admin', (req, res) => {
 // ============================================
 
 app.get('/api/images', (req, res) => {
-    fs.readdir(IMAGES_DIR, (err, files) => {
-        if (err) {
-            return res.status(500).json({ error: 'Ошибка чтения папки' });
+    try {
+        if (!fs.existsSync(IMAGES_DIR)) {
+            return res.json([]);
         }
+        
+        const files = fs.readdirSync(IMAGES_DIR);
         const images = files.filter(f => /\.(webp|jpg|jpeg|png|gif)$/i.test(f));
-        res.json(images);
-    });
+        
+        // Добавляем информацию о каждом файле
+        const imagesWithInfo = images.map(img => ({
+            name: img,
+            url: `/images/${img}`,
+            exists: true,
+            size: fs.statSync(path.join(IMAGES_DIR, img)).size
+        }));
+        
+        res.json(imagesWithInfo);
+    } catch (err) {
+        console.error('Error reading images directory:', err);
+        res.status(500).json({ error: 'Ошибка чтения папки', details: err.message });
+    }
 });
 
 app.post('/api/upload', upload.array('images'), async (req, res) => {
@@ -74,16 +179,25 @@ app.post('/api/upload', upload.array('images'), async (req, res) => {
             return res.status(400).json({ error: 'Нет файлов для загрузки' });
         }
 
-        uploadedFiles.forEach((file) => {
+        const results = [];
+        for (const file of uploadedFiles) {
             const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.webp`;
             const newPath = path.join(IMAGES_DIR, uniqueName);
-            fs.renameSync(file.path, newPath);
-        });
+            
+            try {
+                fs.renameSync(file.path, newPath);
+                // Устанавливаем правильные права на файл
+                fs.chmodSync(newPath, 0o644);
+                results.push({ original: file.originalname, saved: uniqueName });
+            } catch (err) {
+                console.error(`Error renaming file ${file.originalname}:`, err);
+            }
+        }
 
-        res.json({ success: true, message: 'Файлы загружены' });
+        res.json({ success: true, message: 'Файлы загружены', files: results });
     } catch (error) {
         console.error('Ошибка загрузки:', error);
-        res.status(500).json({ error: 'Ошибка загрузки файлов' });
+        res.status(500).json({ error: 'Ошибка загрузки файлов', details: error.message });
     }
 });
 
@@ -97,7 +211,8 @@ app.delete('/api/delete/:name', (req, res) => {
             res.status(404).json({ error: 'Файл не найден' });
         }
     } catch (error) {
-        res.status(500).json({ error: 'Ошибка удаления' });
+        console.error('Error deleting file:', error);
+        res.status(500).json({ error: 'Ошибка удаления', details: error.message });
     }
 });
 
@@ -106,6 +221,7 @@ app.post('/api/reorder', (req, res) => {
         const newOrder = req.body;
         const tempPrefix = `__temp_${Date.now()}_`;
 
+        // Переименовываем во временные имена
         newOrder.forEach((filename, index) => {
             const oldPath = path.join(IMAGES_DIR, filename);
             const tempPath = path.join(IMAGES_DIR, `${tempPrefix}${index}.webp`);
@@ -114,18 +230,20 @@ app.post('/api/reorder', (req, res) => {
             }
         });
 
+        // Переименовываем в финальные имена
         newOrder.forEach((filename, index) => {
             const tempPath = path.join(IMAGES_DIR, `${tempPrefix}${index}.webp`);
             const finalPath = path.join(IMAGES_DIR, `${index + 1}.webp`);
             if (fs.existsSync(tempPath)) {
                 fs.renameSync(tempPath, finalPath);
+                fs.chmodSync(finalPath, 0o644);
             }
         });
 
         res.json({ success: true, message: 'Порядок изменен' });
     } catch (error) {
         console.error('Ошибка изменения порядка:', error);
-        res.status(500).json({ error: 'Ошибка изменения порядка' });
+        res.status(500).json({ error: 'Ошибка изменения порядка', details: error.message });
     }
 });
 
@@ -173,8 +291,14 @@ app.post('/api/config/save', upload.array('images'), async (req, res) => {
             const file = uploadedFiles[i];
             const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}.webp`;
             const newPath = path.join(IMAGES_DIR, uniqueName);
-            fs.renameSync(file.path, newPath);
-            savedImages.push({ index: i, filename: uniqueName });
+            
+            try {
+                fs.renameSync(file.path, newPath);
+                fs.chmodSync(newPath, 0o644);
+                savedImages.push({ index: i, filename: uniqueName });
+            } catch (err) {
+                console.error(`Error saving uploaded file:`, err);
+            }
         }
 
         await db.query('DELETE FROM schema_comics.comics WHERE id = $1', [platform_id]);
@@ -546,6 +670,15 @@ app.get('/api/debug/temp-storage', (req, res) => {
     res.json({ success: true, data: storage });
 });
 
-app.listen(PORT, () => {
-    console.log(`Сервер запущен: http://localhost:${PORT}`);
+// Запуск сервера
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Сервер запущен: http://0.0.0.0:${PORT}`);
+    console.log('PUBLIC_DIR:', PUBLIC_DIR);
+    console.log('IMAGES_DIR:', IMAGES_DIR);
+    console.log('Images dir exists:', fs.existsSync(IMAGES_DIR));
+    if (fs.existsSync(IMAGES_DIR)) {
+        const files = fs.readdirSync(IMAGES_DIR);
+        console.log('Files in images dir:', files.length);
+        files.forEach(f => console.log(' -', f));
+    }
 });

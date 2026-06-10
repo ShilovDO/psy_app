@@ -1,20 +1,26 @@
-# Dockerfile.backend
 FROM node:18-alpine
 
-WORKDIR /app
-
-# Копируем package.json бэкенда
-COPY server/package*.json ./server/
-
-WORKDIR /app/server
-RUN npm install
+# Создаем непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
 WORKDIR /app
-COPY server ./server
 
-# Устанавливаем переменную окружения для production
-ENV NODE_ENV=production
+# Копируем package.json и устанавливаем зависимости
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Копируем исходный код
+COPY . .
+
+# Создаем директорию для изображений и устанавливаем права
+RUN mkdir -p /app/public/images && \
+    chown -R nodejs:nodejs /app/public/images && \
+    chmod 755 /app/public/images
+
+# Переключаемся на непривилегированного пользователя
+USER nodejs
 
 EXPOSE 3001
 
-CMD ["node", "server/server.js"]
+CMD ["node", "server.js"]
