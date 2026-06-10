@@ -13,11 +13,23 @@ from pathlib import Path
 import shutil
 import base64
 from typing import Optional
+import os
+from pathlib import Path
 
 router = APIRouter()
 
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)  # создаем папку, если её нет
+# Определяем базовую директорию для загрузок
+# В Docker используем /app/uploads, локально - uploads
+if os.path.exists("/.dockerenv"):
+    UPLOAD_DIR = Path("/app/uploads")
+else:
+    UPLOAD_DIR = Path("uploads")
+
+# Создаем директорию с правильными правами
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Устанавливаем права (работает только в Linux/Docker)
+if os.name != 'nt':  # если не Windows
+    os.chmod(UPLOAD_DIR, 0o777)
 
 @router.post("/change_user/")
 async def change_user(
@@ -27,81 +39,127 @@ async def change_user(
     password: str = Form(None),
     admin: Optional[str] = Form(None),
     image: UploadFile = File(None),
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db)
+):
+    try:
+        find_user = db.query(Users).filter(Users.id == id).first()
+        
+        # Правильное преобразование с учетом null
+        if admin is not None and admin.lower() != 'null':
+            admin = admin.lower() in ('true', '1', 'yes')
+        else:
+            admin = None
 
-    find_user = db.query(Users).filter(Users.id == id).first()
-    # Правильное преобразование с учетом null
-    if admin is not None and admin.lower() != 'null':
-        admin = admin.lower() in ('true', '1', 'yes')
-    else:
-        admin = None  # Явно устанавливаем None для null
-
-    if find_user.admin and not admin:
-        find_admins = db.query(Users).filter(Users.admin == True).all()
-        if len(find_admins) == 1:
+        if find_user.admin and not admin:
+            find_admins = db.query(Users).filter(Users.admin == True).all()
+            if len(find_admins) == 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Это последний оставшийся админ в системе, его нельзя удалить",
+                )
+        
+        check_user = (
+            db.query(Users)
+            .filter(Users.mail == mail)
+            .filter(Users.id != id)
+            .first()
+        )
+        if check_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Это последний оставшийся админ в системе, его нельзя удалить",
+                detail="Пользователь с такой почтой уже существует",
             )
-    check_user = (
-        db.query(Users)
-        .filter(Users.mail == mail)
-        .filter(Users.id != id)
-        .first()
-    )
-    if check_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с такой почтой уже существует",
-        )
 
-    if find_user:
-
-        if find_user.photo:
+        if find_user:
             # Удаляем старый файл фото
-            old_photo_path = Path(find_user.photo)
-            if old_photo_path.exists():
+            if find_user.photo:
+                # Нормализуем путь (меняем \ на /)
+                old_photo = find_user.photo.replace('\\', '/')
+                old_photo_path = UPLOAD_DIR / Path(old_photo).name
+                
+                if old_photo_path.exists():
+                    try:
+                        old_photo_path.unlink()
+                    except Exception as e:
+                        print(f"Ошибка при удалении старого файла: {e}")
+
+            photo_path = find_user.photo  # Сохраняем старый путь по умолчанию
+            
+            if image and image.filename:
                 try:
-                    old_photo_path.unlink()  # Удаляем файл
+                    # Генерируем уникальное имя файла
+                    file_extension = os.path.splitext(image.filename)[1] or '.jpg'
+                    safe_filename = f"{uuid.uuid4()}{file_extension}"
+                    file_path = UPLOAD_DIR / safe_filename
+                    
+                    # Гарантируем существование директории и права
+                    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                    if os.name != 'nt':
+                        os.chmod(UPLOAD_DIR, 0o777)
+                    
+                    # Сохраняем файл
+                    with open(file_path, "wb") as buffer:
+                        shutil.copyfileobj(image.file, buffer)
+                    
+                    # Устанавливаем права на файл
+                    if os.name != 'nt':
+                        os.chmod(file_path, 0o666)
+                    
+                    # Сохраняем относительный путь в БД (для совместимости)
+                    photo_path = f"uploads/{safe_filename}"
+                    
+                    print(f"File saved successfully: {file_path}")
+                    
                 except Exception as e:
-                    # Логируем ошибку, но продолжаем выполнение
-                    print(f"Ошибка при удалении старого файла: {e}")
+                    print(f"Error saving file: {e}")
+                    # Пробуем альтернативный метод сохранения
+                    try:
+                        contents = await image.read()
+                        file_path = UPLOAD_DIR / safe_filename
+                        with open(file_path, "wb") as f:
+                            f.write(contents)
+                        photo_path = f"uploads/{safe_filename}"
+                        print(f"File saved with alternative method: {file_path}")
+                    except Exception as e2:
+                        print(f"Alternative save also failed: {e2}")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Failed to save file: {str(e2)}"
+                        )
 
-        photo_path = None  # Сохраняем старый путь по умолчанию
-        if image and mail:
-            # Сохраняем файл на диск
-            # Генерируем уникальное имя файла
-            file_extension = os.path.splitext(image.filename)[1]  # Используем расширение загружаемого файла
-            safe_filename = f"{uuid.uuid4()}{file_extension}"
-            file_path = UPLOAD_DIR / safe_filename
+            # Обновляем пользователя
+            find_user.username = username
+            find_user.mail = mail
+            find_user.photo = photo_path
+            if password:
+                find_user.password = get_password_hash(password)
+            find_user.admin = admin
             
-            # Убеждаемся, что директория существует
-            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            db.commit()
+            db.refresh(find_user)
             
-            # Сохраняем файл
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
-            photo_path = str(file_path)
-
-        find_user.username = username
-        find_user.mail = mail
-        find_user.photo = photo_path
-        if password:
-            find_user.password = get_password_hash(password)
-        find_user.admin = admin
-        db.commit()
-        db.refresh(find_user)
-        return {
-            "id": find_user.id,
-            "username": find_user.username,
-            "mail": find_user.mail,
-            "admin": find_user.admin,
-        }
-    else:
+            return {
+                "id": find_user.id,
+                "username": find_user.username,
+                "mail": find_user.mail,
+                "admin": find_user.admin,
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Пользователь не найден"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
         )
-
 
 @router.get("/all_users")
 async def all_users(
