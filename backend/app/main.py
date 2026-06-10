@@ -4,6 +4,8 @@ from app.middleware import auth_middleware
 from app.api.endpoints import auth, users, services, configs, routes, stations, results
 from fastapi.responses import JSONResponse
 import base64
+import os
+from pathlib import Path
 
 app = FastAPI()
 
@@ -49,20 +51,83 @@ app.include_router(stations.router, prefix="/stations", tags=["Stations"])
 app.include_router(results.router, prefix="/results", tags=["Results"])
 
 
+# @app.get("/get_current_user")
+# async def currenUser(request: Request):
+
+#     try:
+
+#         if request.method == "OPTIONS":
+#             return Response(status_code=200)
+
+
+#         image_base64 = None
+#         if request.state.user.photo:
+#             with open(request.state.user.photo, "rb") as img_file:
+#                 image_bytes = img_file.read()
+#                 image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+#         user_dict = {
+#             "id": request.state.user.id,
+#             "username": request.state.user.username,
+#             "email": request.state.user.mail,
+#             "photo": image_base64,
+#             "admin": request.state.user.admin
+#         }
+#         return {
+#             "user": user_dict
+#         }
+#     except:
+#         return JSONResponse(
+#             status_code=status.HTTP_200_OK,
+#             content={"message": "Successfully logged out"},
+#         )
+
 @app.get("/get_current_user")
 async def currenUser(request: Request):
-
     try:
-
         if request.method == "OPTIONS":
             return Response(status_code=200)
 
-
         image_base64 = None
         if request.state.user.photo:
-            with open(request.state.user.photo, "rb") as img_file:
-                image_bytes = img_file.read()
-                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            # Получаем путь из БД
+            photo_path = request.state.user.photo
+            
+            # Нормализуем путь: заменяем обратные слеши на прямые
+            photo_path = photo_path.replace('\\', '/')
+            
+            # Получаем только имя файла
+            filename = os.path.basename(photo_path)
+            
+            # Определяем базовую директорию для загрузок
+            # В Docker это будет /app/uploads, локально - текущая директория
+            base_dir = os.getenv("UPLOAD_DIR", ".")
+            
+            # Формируем полный путь
+            if base_dir == "/app/uploads":
+                full_path = os.path.join("/app/uploads", filename)
+            else:
+                full_path = os.path.join("uploads", filename)
+            
+            # Пробуем открыть файл
+            try:
+                with open(full_path, "rb") as img_file:
+                    image_bytes = img_file.read()
+                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            except FileNotFoundError:
+                # Если не нашли по первому пути, пробуем альтернативные
+                alternative_paths = [
+                    os.path.join("/app/uploads", filename),  # Docker
+                    os.path.join("uploads", filename),       # Локально Windows
+                    photo_path,                              # Оригинальный путь
+                ]
+                
+                for alt_path in alternative_paths:
+                    if os.path.exists(alt_path):
+                        with open(alt_path, "rb") as img_file:
+                            image_bytes = img_file.read()
+                            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+                        break
 
         user_dict = {
             "id": request.state.user.id,
@@ -71,10 +136,9 @@ async def currenUser(request: Request):
             "photo": image_base64,
             "admin": request.state.user.admin
         }
-        return {
-            "user": user_dict
-        }
-    except:
+        return {"user": user_dict}
+    except Exception as e:
+        print(f"Error in currenUser: {str(e)}")
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "Successfully logged out"},
