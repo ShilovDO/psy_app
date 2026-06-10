@@ -12,6 +12,7 @@ class UserRegistration(BaseModel):
     mail: EmailStr
     password: str
     admin: Optional[bool] = None
+    active: Optional[bool] = None
 
 
 class User(BaseModel):
@@ -19,6 +20,7 @@ class User(BaseModel):
     username: str
     mail: EmailStr
     admin: Optional[bool] = None
+    active: Optional[bool] = None
 
 class FullUser(BaseModel):
     id: int
@@ -26,6 +28,7 @@ class FullUser(BaseModel):
     mail: EmailStr
     password: str
     admin: Optional[bool] = None
+    active: Optional[bool] = None
 
 class ID(BaseModel):
     id: int
@@ -36,4 +39,5 @@ class UsersResponse(BaseModel):
     mail: str
     admin: Optional[bool] = None
     photo: Optional[str] = None
+    active: Optional[bool] = None
 

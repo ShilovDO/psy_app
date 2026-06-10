@@ -4,7 +4,34 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="123dd6b3-987a-448c-b512-383a141c9e73" name="Changes" comment="" />
+    <list default="true" id="123dd6b3-987a-448c-b512-383a141c9e73" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/app/api/endpoints/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app/api/endpoints/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/app/api/endpoints/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app/api/endpoints/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/public/vite.svg" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/public/vite.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/App.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Components/Dropdown.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/Layouts/AdminLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Layouts/AdminLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/Layouts/AuthenticatedLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Layouts/AuthenticatedLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/Layouts/GuestLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/Layouts/GuestLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/api/interceptors.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/api/interceptors.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/api/users.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/api/users.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/hooks/useTheme.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/hooks/useTheme.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Auth/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Auth/Login.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Auth/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Auth/Register.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Profile/Partials/DeleteUserForm.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Profile/Partials/DeleteUserForm.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Profile/Partials/ProfileInformation.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Profile/Partials/ProfileInformation.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Services.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/admin/Users.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/configs/Configs.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/configs/Configs.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/results/Results.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/results/Results.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/routes/CreateRoute.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/routes/CreateRoute.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/routes/RoutePlayer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/routes/RoutePlayer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/routes/Routes.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../service_carusel/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/../service_carusel/server.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../service_carusel/views/show.html" beforeDir="false" afterPath="$PROJECT_DIR$/../service_carusel/views/show.html" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -53,7 +80,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/shilo/PycharmProjects/FastAPIProjectPsycho/psycho&quot;,
+    &quot;last_opened_file_path&quot;: &quot;W:/git_psy/psy_app/backend_new&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -158,8 +185,8 @@
       <method v="2" />
     </configuration>
     <configuration name="FastAPIProjectPsycho" type="Python.FastAPI">
-      <option name="additionalOptions" value="--reload --port 8001" />
-      <option name="file" value="C:\git_psy\psy_app\backend\app\main.py" />
+      <option name="additionalOptions" value=" --port 8001 --reload" />
+      <option name="file" value="W:\git_psy\psy_app\backend_new\app\main.py" />
       <module name="FastAPIProjectPsycho" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -271,6 +298,24 @@
       <workItem from="1776959068001" duration="6342000" />
       <workItem from="1777040253379" duration="4390000" />
       <workItem from="1777474163463" duration="1244000" />
+      <workItem from="1777561228407" duration="1214000" />
+      <workItem from="1778242879470" duration="3261000" />
+      <workItem from="1778772085777" duration="2616000" />
+      <workItem from="1778858589353" duration="7559000" />
+      <workItem from="1778934324286" duration="1506000" />
+      <workItem from="1778935992107" duration="235000" />
+      <workItem from="1778936339604" duration="251000" />
+      <workItem from="1778936635203" duration="1520000" />
+      <workItem from="1779292442884" duration="1358000" />
+      <workItem from="1779370567493" duration="4204000" />
+      <workItem from="1779451043773" duration="5685000" />
+      <workItem from="1780125758126" duration="915000" />
+      <workItem from="1780132926803" duration="1692000" />
+      <workItem from="1780418665925" duration="7695000" />
+      <workItem from="1780744610115" duration="27000" />
+      <workItem from="1780745183593" duration="2376000" />
+      <workItem from="1780937146475" duration="6310000" />
+      <workItem from="1781082724384" duration="7313000" />
     </task>
     <servers />
   </component>
@@ -286,7 +331,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/api/endpoints/configs.py</url>
-          <line>86</line>
+          <line>94</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -305,16 +350,22 @@
           <option name="timeStamp" value="21" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app/api/endpoints/users.py</url>
-          <line>103</line>
-          <option name="timeStamp" value="22" />
+          <url>file://$PROJECT_DIR$/app/api/endpoints/auth.py</url>
+          <line>31</line>
+          <option name="timeStamp" value="24" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app/api/endpoints/services.py</url>
+          <line>15</line>
+          <option name="timeStamp" value="25" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1777474184864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/backend$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1778935273998" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/psycho$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1748980062076" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/backend_new$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1781108219755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/backend$test.coverage" NAME="test Coverage Results" MODIFIED="1773833722797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/psycho$main.coverage" NAME="main Coverage Results" MODIFIED="1747730190252" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FastAPIProjectPsycho$FastAPIProjectPsycho.coverage" NAME="FastAPIProjectPsycho Coverage Results" MODIFIED="1746703411695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />

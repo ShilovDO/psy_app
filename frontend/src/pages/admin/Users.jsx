@@ -53,6 +53,8 @@ export default function Users() {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const imageRef = useRef(null);
     const fileInputRef = useRef(null);
+    const [emailForAvatar, setEmailForAvatar] = useState('');
+    const [focusLeave, setFocusLeave] = useState(false);
 
     const [searchParams, setSearchParams] = useSearchParams();
     const currentPage = parseInt(searchParams.get("page")) || 1;
@@ -66,12 +68,13 @@ export default function Users() {
         formState: { errors },
         reset,
         setValue,
-        watch
+        watch,
+        clearErrors
     } = useForm({
         mode: "onTouched",
         defaultValues: {
-            username: '',
-            mail: '',
+            name: '',
+            email: '',
             password: '',
             admin: false
         },
@@ -86,10 +89,12 @@ export default function Users() {
                 setUsersData(response.data);
             } else {
                 setUsersData(prev => ({ ...prev, items: [] }));
-                toast.error("Не удалось получить список пользователей");
+                //toast.error("Не удалось получить список пользователей");
+                throw new Error("Не удалось получить список пользователей");
             }
         } catch (error) {
-            toast.error((error?.message || "Ошибка при получении данных") + ` Код ошибки: ${error?.status}`);
+            if (error?.status != 401)
+                toast.error((error?.message || "Ошибка при получении данных") + ` Код ошибки: ${error?.status}`, {toastId: "unique-message-8"});
         } finally {
             setLoading(false);
         }
@@ -102,6 +107,13 @@ export default function Users() {
         setSearchParams({ page: 1 });
     };
 
+    const handleFocusLeaveEmail = (e) => {
+        setFocusLeave(true);
+        setEmailForAvatar(watch('email'))
+        handleMailOne(e);
+        
+    };
+
     const handleSortChange = (e) => {
         setSortParam(e.target.value);
         localStorage.setItem('user_sort', e.target.value);
@@ -112,8 +124,8 @@ export default function Users() {
         setIsCreating(true);
         setCurrentUserId(null);
         reset({
-            username: '',
-            mail: '',
+            name: '',
+            email: '',
             password: '',
             admin: false
         });
@@ -126,8 +138,8 @@ export default function Users() {
         setIsCreating(false);
         setCurrentUserId(user.id);
 
-        setValue('username', user.username);
-        setValue('mail', user.mail);
+        setValue('name', user.username);
+        setValue('email', user.mail);
         setValue('admin', user.admin === null ? "null" : String(user.admin));
 
         setAvatarPreviewBase64(user.photo || null);
@@ -137,15 +149,19 @@ export default function Users() {
     };
 
     const handleDelete = async (userId) => {
-        if (window.confirm("Удалить пользователя?")) {
+
             try {
-                await api.deleteUser(userId);
-                toast.success("Пользователь удален");
+                const response = await api.deleteUser(userId);
+                if (response?.data?.active)
+                    toast.success("Пользователь успешно разблокирован");
+                else
+                    toast.success("Пользователь успешно заблокирован");
                 fetchUsers(currentPage, perPage, sortParam);
             } catch (error) {
-                toast.error(error.response?.data?.detail || "Ошибка при удалении");
+                if (error?.status != 401)
+                    toast.error(error.response?.data?.detail || "Ошибка при удалении", {toastId: "unique-message-9"});
             }
-        }
+        
     };
 
     const handleAvatarClick = () => {
@@ -156,11 +172,11 @@ export default function Users() {
         const file = e.target.files[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            toast.error("Пожалуйста, выберите изображение");
+            toast.error("Пожалуйста, выберите изображение", {toastId: "unique-message-10"});
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast.error("Файл не должен превышать 5 МБ");
+            toast.error("Файл не должен превышать 5 МБ", {toastId: "unique-message-11"});
             return;
         }
 
@@ -270,7 +286,7 @@ export default function Users() {
     const handleSaveCrop = async () => {
         const blob = await getCroppedBlob();
         if (!blob) {
-            toast.error("Не удалось обрезать изображение");
+            toast.error("Не удалось обрезать изображение", {toastId: "unique-message-12"});
             return;
         }
         setIsUploadingAvatar(true);
@@ -283,7 +299,8 @@ export default function Users() {
             setCompletedCrop(null);
         } catch (err) {
             console.error(err);
-            toast.error("Ошибка при обработке изображения");
+            if (err?.status != 401)
+                toast.error("Ошибка при обработке изображения", {toastId: "unique-message-13"});
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -297,8 +314,8 @@ export default function Users() {
 
     const onSubmit = async (data) => {
         const normalizedData = {
-            username: data.username,
-            mail: data.mail,
+            username: data.name,
+            mail: data.email,
             admin: data.admin === "null" ? null : (data.admin === "true"),
             password: data.password || undefined
         };
@@ -323,7 +340,7 @@ export default function Users() {
                 await api.updateUser(formData);
                 toast.success("Пользователь обновлён");
             } else {
-                toast.error("Почта уже занята");
+                toast.error("Почта уже занята", {toastId: "unique-message-15"});
                 return;
             }
 
@@ -332,19 +349,36 @@ export default function Users() {
             setAvatarBlob(null);
             fetchUsers(currentPage, perPage, sortParam);
         } catch (error) {
-            toast.error(error.response?.data?.detail || "Ошибка при сохранении");
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || "Ошибка при сохранении", {toastId: "unique-message-14"});
         }
     };
 
     const handleMail = async (e) => {
+        if (focusLeave) {
         const mail = e.target.value;
-        setValue("mail", mail, { shouldValidate: true });
+        setValue("email", mail, { shouldValidate: true });
         if (!mail) return;
         try {
             const res = await api.checkMail(mail);
             setMailFree(res.data);
         } catch (error) {
-            toast.error("Ошибка проверки почты");
+            if (error?.status != 401)
+                toast.error("Ошибка проверки почты", {toastId: "unique-message-16"});
+        }
+    }
+    };
+
+    const handleMailOne = async (e) => {
+        const mail = e.target.value;
+        setValue("email", mail, { shouldValidate: true });
+        if (!mail) return;
+        try {
+            const res = await api.checkMail(mail);
+            setMailFree(res.data);
+        } catch (error) {
+            if (error?.status != 401)
+                toast.error("Ошибка проверки почты", {toastId: "unique-message-17"});
         }
     };
 
@@ -366,6 +400,22 @@ export default function Users() {
         window.addEventListener("keydown", handleEsc);
         return () => window.removeEventListener("keydown", handleEsc);
     }, []);
+
+    useEffect(() => {
+        if (!isModalOpen) {
+
+        
+        reset({
+            name: '',
+            email: '',
+            password: '',
+            admin: false
+        });
+        clearErrors();
+        setEmailForAvatar('');
+        setFocusLeave(false);
+    }
+    }, [isModalOpen]);
 
     return (
         <div className="py-12">
@@ -433,8 +483,16 @@ export default function Users() {
                                                         <p className="text-lg font-medium text-gray-900 truncate dark:text-gray-200">{user.username}</p>
                                                         <p className="text-sm text-gray-500 truncate dark:text-gray-400">{user.mail}</p>
                                                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {user.admin ? 'Администратор' : user.admin === false ? 'Психолог' : "Клиент"}
+                                                            {user.admin ? 'Администратор' : user.admin === false ? 'Психолог' : "Диагностируемый"}
                                                         </div>
+                                                        {!user?.active && (
+                                                        <span className={`w-fit p-2 py-1 text-xs rounded-full ${
+                            user?.active
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                            {'Заблокирован'}
+                        </span>)}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -453,11 +511,17 @@ export default function Users() {
                                                                 </svg>
                                                                 Изменить
                                                             </Dropdown.Link>
-                                                            <Dropdown.Link as="button" onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Удалить
+                                                            <Dropdown.Link as="button" onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }} className={`flex items-center px-4 py-2 text-sm ${user?.active ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"} hover:bg-gray-100 dark:hover:bg-gray-600`}>
+                                                                {user?.active ? (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                  </svg>
+                                                                ) : (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+</svg>
+                                                                )}
+                                                                {user?.active ? 'Заблокировать' : 'Разблокировать'}
                                                             </Dropdown.Link>
                                                         </Dropdown.Content>
                                                     </Dropdown>
@@ -488,7 +552,7 @@ export default function Users() {
                                 <div className="relative cursor-pointer group" onClick={handleAvatarClick}>
                                     <Avatar
                                         key={avatarPreviewBase64 || (isCreating ? 'new' : 'edit')}
-                                        email={watch('mail') || 'temp'}
+                                        email={emailForAvatar || 'temp'}
                                         avatarUrl={avatarPreviewBase64}
                                         inEdit={avatarPreviewBase64?.startsWith("data")}
                                         size="xxl"
@@ -512,24 +576,28 @@ export default function Users() {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Имя пользователя</label>
                                     <input
                                         type="text"
-                                        {...register('username', { required: 'Обязательное поле' })}
+                                        autocomplete="off"
+                                        maxLength={30}
+                                        {...register('name', { required: 'Обязательное поле' })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
-                                    {errors.username && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.username.message}</p>}
+                                    {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.name.message}</p>}
                                 </div>
 
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                                     <input
                                         type="email"
-                                        {...register('mail', {
+                                        autocomplete="off"
+                                        {...register('email', {
                                             required: 'Обязательное поле',
                                             pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Некорректный email" }
                                         })}
                                         onChange={handleMail}
+                                        onBlur={handleFocusLeaveEmail}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
-                                    {errors.mail && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.mail.message}</p>}
+                                    {errors.email && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.email.message}</p>}
                                     {!mailFree && <p className="mt-1 text-sm text-red-600 dark:text-red-500">Эта почта занята!</p>}
                                 </div>
 
@@ -542,8 +610,9 @@ export default function Users() {
                                             <TextInput
                                                 id="password"
                                                 type="password"
+                                                autocomplete="off"
                                                 {...register('password', {
-                                                    required: "Поле обязательно к заполнению",
+                                                    required: "Обязательное поле",
                                                     pattern: {
                                                         value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/,
                                                         message: "Пароль должен содержать минимум 8 символов, включая заглавные и строчные буквы, цифры и спецсимволы"
@@ -574,18 +643,19 @@ export default function Users() {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Роль пользователя</label>
                                     <div className="space-y-2">
                                         <div className="flex items-center">
-                                            <input type="radio" value="true" {...register("admin")} className="h-4 w-4" />
+                                            <input type="radio" value="true" {...register("admin", {required: 'Роль обязательна для выбора'})} className="h-4 w-4" autocomplete="off" />
                                             <label className="ml-2">Администратор</label>
                                         </div>
                                         <div className="flex items-center">
-                                            <input type="radio" value="false" {...register("admin")} className="h-4 w-4" />
+                                            <input type="radio" value="false" {...register("admin", {required: 'Роль обязательна для выбора'})} className="h-4 w-4" autocomplete="off" />
                                             <label className="ml-2">Психолог</label>
                                         </div>
                                         <div className="flex items-center">
-                                            <input type="radio" value="null" {...register("admin")} className="h-4 w-4" />
-                                            <label className="ml-2">Клиент</label>
+                                            <input type="radio" value="null" {...register("admin", {required: 'Роль обязательна для выбора'})} className="h-4 w-4" autocomplete="off" />
+                                            <label className="ml-2">Диагностируемый</label>
                                         </div>
                                     </div>
+                                    {errors.admin && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.admin.message}</p>}
                                 </div>
 
                                 <div className="flex justify-end space-x-3">

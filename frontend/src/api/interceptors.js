@@ -42,8 +42,8 @@ export const setupInterceptors = (apiClient) => {
 const handleResponseError = async (error, apiClient) => {
   console.log(error);
   
-  const errorMessage = error.response?.data?.message || 'Ошибка сети или сервера';
-  const status = error.response?.status || 500;
+  const errorMessage = error.response?.data?.message || error.response?.data?.detail || 'Ошибка сети или сервера';
+  const status = error.response?.status || error.response?.detail || 500;
   const originalRequest = error.config;
   
   console.error(`Ошибка ${status}: ${errorMessage}`);

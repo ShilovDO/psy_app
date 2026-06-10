@@ -68,14 +68,14 @@ class Users(Base):
     password: Mapped[str] = mapped_column(Text)
     photo: Mapped[str] = mapped_column(Text)
     admin: Mapped[bool] = mapped_column(Boolean)
+    active: Mapped[bool] = mapped_column(Boolean)
 
-    routes: Mapped[List["Routes"]] = relationship(
-        "Routes", back_populates="users", secondary="users_routes"
-    )
-    configs: Mapped[List["Configs"]] = relationship("Configs", back_populates="users")
+    # Только одна связь с промежуточной таблицей
     users_routes: Mapped[List["UsersRoutes"]] = relationship(
         "UsersRoutes", back_populates="user"
     )
+
+    configs: Mapped[List["Configs"]] = relationship("Configs", back_populates="users")
 
 
 class Routes(Base):
@@ -102,12 +102,13 @@ class Routes(Base):
     name: Mapped[str] = mapped_column(Text)
     visible: Mapped[bool] = mapped_column(Boolean)
 
-    users: Mapped["Users"] = relationship("Users", back_populates="routes")
-    stations: Mapped[List["Stations"]] = relationship(
-        "Stations", back_populates="routes"
-    )
+    # Только одна связь с промежуточной таблицей
     users_routes: Mapped[List["UsersRoutes"]] = relationship(
         "UsersRoutes", back_populates="route"
+    )
+
+    stations: Mapped[List["Stations"]] = relationship(
+        "Stations", back_populates="routes"
     )
 
 
@@ -127,6 +128,7 @@ class UsersRoutes(Base):
     route_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     visible: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
+    # Связи с основными таблицами
     user: Mapped["Users"] = relationship("Users", back_populates="users_routes")
     route: Mapped["Routes"] = relationship("Routes", back_populates="users_routes")
 

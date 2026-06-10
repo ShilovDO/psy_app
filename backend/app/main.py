@@ -8,7 +8,7 @@ import base64
 app = FastAPI()
 
 # CORS
-origins = ["http://localhost:5177", "http://127.0.0.1:5177"]
+origins = ["http://localhost:5177", "http://127.0.0.1:5177", "http://192.168.255.129:5177"]
 
 # Кастомная middleware
 app.middleware("http")(auth_middleware)
@@ -34,14 +34,19 @@ app.include_router(results.router, prefix="/results", tags=["Results"])
 
 @app.get("/get_current_user")
 async def currenUser(request: Request):
+
     try:
+
+        if request.method == "OPTIONS":
+            return Response(status_code=200)
+
+
         image_base64 = None
         if request.state.user.photo:
             with open(request.state.user.photo, "rb") as img_file:
                 image_bytes = img_file.read()
                 image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-        if request.method == "OPTIONS":
-            return Response(status_code=200)
+
         user_dict = {
             "id": request.state.user.id,
             "username": request.state.user.username,
@@ -49,9 +54,9 @@ async def currenUser(request: Request):
             "photo": image_base64,
             "admin": request.state.user.admin
         }
-        return JSONResponse(
-            content={"user": user_dict},
-        )
+        return {
+            "user": user_dict
+        }
     except:
         return JSONResponse(
             status_code=status.HTTP_200_OK,

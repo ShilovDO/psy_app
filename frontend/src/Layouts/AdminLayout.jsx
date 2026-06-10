@@ -56,7 +56,8 @@ export default function AdminLayout({header}) {
 
         } catch (error) {
             // Обработка ошибок при отправке ответа
-            toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`); // Отображаем сообщение об ошибке
+            if (error?.status != 401)
+              toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`, {toastId: "unique-message-3"}); // Отображаем сообщение об ошибке
         } finally {
             //setLoading(false); // Устанавливаем состояние загрузки в false в любом случае (успех или ошибка)
             setShowingNavigationDropdown(false); // гасим бургер меню при выходе из аккаунта

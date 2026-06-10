@@ -1,7 +1,7 @@
 from starlette import status
 from fastapi import HTTPException, status, Request, Depends, APIRouter, UploadFile, File, Form
 from app.schemas.user import ID, User, FullUser, UsersResponse
-from app.db.models import Users, Routes, Stations, UsersRoutes
+from app.db.models import Users, Routes, Stations, UsersRoutes, Results
 from app.core.security import get_password_hash
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path 
 import shutil
 import base64
+from typing import Optional
 
 router = APIRouter()
 
@@ -24,11 +25,17 @@ async def change_user(
     username: str = Form(None),
     mail: str = Form(None),
     password: str = Form(None),
-    admin: bool = Form(None),
+    admin: Optional[str] = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db)):
 
     find_user = db.query(Users).filter(Users.id == id).first()
+    # Правильное преобразование с учетом null
+    if admin is not None and admin.lower() != 'null':
+        admin = admin.lower() in ('true', '1', 'yes')
+    else:
+        admin = None  # Явно устанавливаем None для null
+
     if find_user.admin and not admin:
         find_admins = db.query(Users).filter(Users.admin == True).all()
         if len(find_admins) == 1:
@@ -169,6 +176,7 @@ async def all_users(
             username=user.username,
             mail=user.mail,
             admin=user.admin,
+            active=user.active,
             photo=image_base64
         )
         items.append(users_response)
@@ -187,35 +195,31 @@ async def all_users(
 
 @router.post("/delete_user")
 async def delete_user(Id: ID, request: Request, db: Session = Depends(get_db)):
-    # try:
-    user_id = request.state.user.id
-    check_user = db.query(Users).filter(Users.id == Id.id).first()
-
-    if check_user and user_id != check_user.id:
-        check_route = db.query(Routes).filter(Routes.owner == Id.id).first()
-
-        while check_route:
-            check_stations = (
-                db.query(Stations).filter(Stations.route == check_route.id).first()
-            )
-
-            while check_stations:
-                db.query(Stations).filter(Stations.route == check_route.id).delete()
+    try:
+        user_id = request.state.user.id
+        check_user = db.query(Users).filter(Users.id == Id.id).first()
+        if check_user:
+            if user_id != check_user.id:
+                check_user.active = not check_user.active
                 db.commit()
-                check_stations = (
-                    db.query(Stations).filter(Stations.route == check_route.id).first()
+                db.refresh(check_user)
+                return {
+                    "id": check_user.id,
+                    "active": check_user.active
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="Нельзя менять самого себя"
                 )
-
-            route = db.query(Routes).filter(Routes.id == check_route.id).delete()
-            db.commit()
-            check_route = db.query(Routes).filter(Routes.owner == Id.id).first()
-
-        user = db.query(Users).filter(Users.id == Id.id).delete()
-        db.commit()
-        return check_user
-    else:
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Пользователь не существует"
+            )
+    except Exception as e:
+        print(f"Refresh error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Пользователь не существует"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail
         )
 
 @router.get("/search_users_out_route", response_model=List[User])
@@ -265,7 +269,7 @@ async def search_users(route_id: int, search: str = "", db: Session = Depends(ge
     if search:
         query = query.filter(Users.username.ilike(f"{search}%"))
         
-    users = query.all()
+    users = query.filter(Users.active == True).all()
     
     return [
         User(
@@ -338,3 +342,43 @@ async def addProduct(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     finally:
         db.close()
+
+@router.get("/users_for_results")
+async def usersForResults(
+    request: Request,
+    db: Session = Depends(get_db)):
+    user_id = request.state.user.id
+    # Базовый запрос
+    query = (
+        db.query(Users)
+        .join(Results, Results.user == Users.id)
+        .join(Routes, Routes.id == Results.route)
+        .filter(Routes.owner == user_id)
+        .distinct()  # чтобы избежать дубликатов, если у пользователя несколько результатов
+    )
+
+    users = query.all()
+
+    items = []
+    for user in users:
+        # Формируем base64 для изображения, если оно есть
+        image_base64 = None
+        if user.photo:
+            try:
+                with open(user.photo, "rb") as img_file:
+                    image_bytes = img_file.read()
+                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            except Exception as e:
+                print(f"Error reading image: {e}")
+
+        # Создаем объект ответа
+        users_response = UsersResponse(
+            id=user.id,
+            username=user.username,
+            mail=user.mail,
+            admin=user.admin,
+            photo=image_base64
+        )
+        items.append(users_response)
+
+    return items

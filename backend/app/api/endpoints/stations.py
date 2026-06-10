@@ -49,34 +49,34 @@ async def delete_station(station: Route, db: Session = Depends(get_db)):
         )
 
 
-@router.post("/change_station")
-async def change_station(station: ChangeStation, db: Session = Depends(get_db)):
-    try:
-        # Находим станцию
-        existing_station = db.query(Stations).filter(Stations.id == station.id).first()
+# @router.post("/change_station")
+# async def change_station(station: ChangeStation, db: Session = Depends(get_db)):
+#     try:
+#         # Находим станцию
+#         existing_station = db.query(Stations).filter(Stations.id == station.id).first()
 
-        if not existing_station:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Station not found"
-            )
-        # Обновляем поля
-        if station.number is not None:
-            existing_station.number = station.number
-        if station.next is not None:
-            existing_station.next = station.next
-        if station.config is not None:
-            existing_station.config = station.config
-        if station.description is not None:
-            existing_station.description = station.description
-        if station.entry is not None:
-            existing_station.entry = station.entry
+#         if not existing_station:
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND, detail="Station not found"
+#             )
+#         # Обновляем поля
+#         if station.number is not None:
+#             existing_station.number = station.number
+#         if station.next is not None:
+#             existing_station.next = station.next
+#         if station.config is not None:
+#             existing_station.config = station.config
+#         if station.description is not None:
+#             existing_station.description = station.description
+#         if station.entry is not None:
+#             existing_station.entry = station.entry
 
-        db.commit()
-        return existing_station
+#         db.commit()
+#         return existing_station
 
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/all_station/{route_id}")

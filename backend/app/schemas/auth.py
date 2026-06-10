@@ -12,6 +12,6 @@ class TokenData(BaseModel):
 
 
 class UserLogin(BaseModel):
-    mail: EmailStr
+    mail: str
     password: str
     remember: bool

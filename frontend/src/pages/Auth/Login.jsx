@@ -69,7 +69,8 @@ export default function Login() {
 
         } catch (error) {
             // Обработка ошибок при отправке ответа
-            toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`); // Отображаем сообщение об ошибке
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`, {toastId: "unique-message-18"}); // Отображаем сообщение об ошибке
         } finally {
             setLoading(false); // Устанавливаем состояние загрузки в false в любом случае (успех или ошибка)
             resetField('password');
@@ -80,7 +81,7 @@ export default function Login() {
     return (
 <>
     <Helmet>
-        <title>Log in</title>
+        <title>Вход</title>
     </Helmet>
     {loading ? <Spiner /> :
 
@@ -145,7 +146,7 @@ export default function Login() {
 
                     <div className="flex justify-center mt-4">
                         <PrimaryButton type='submit' disabled={!isValid}>
-                            Log in
+                            Войти
                         </PrimaryButton>
 
                     </div>

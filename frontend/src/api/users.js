@@ -29,4 +29,7 @@ export const usersApi = {
   addImage: async (data) => {
     return apiClient.post('/users/add_image', data);
   },
+  getUsersForResults: async (search, route_id) => {
+    return apiClient.get('/users/users_for_results');
+},
 };

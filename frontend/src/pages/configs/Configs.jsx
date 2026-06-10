@@ -109,8 +109,9 @@ export default function Configs() {
                 setServices(response.data.items);
             }
         } catch (error) {
-            toast.error("Не удалось загрузить список сервисов");
-            console.error("Ошибка загрузки сервисов:", error);
+            if (error?.status != 401)
+                toast.error("Не удалось загрузить список сервисов", {toastId: "unique-message-20"});
+            console.error("Ошибка загрузки сервисов:", error, {toastId: "unique-message-20"});
         } finally {
             setLoadingServices(false);
         }
@@ -144,7 +145,8 @@ export default function Configs() {
                 setConfigsData(responseUser.data)               
       
         } catch (error) {
-            toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`, {toastId: "unique-message-21"});
             console.error('Ошибка при загрузке сервисов:', error);
         } finally {
             setLoading(false);
@@ -228,7 +230,8 @@ export default function Configs() {
             }
         } catch (error) {
             console.error('Full error:', error);
-            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`);
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`, {toastId: "unique-message-22"});
         }
     };
 
@@ -242,7 +245,8 @@ export default function Configs() {
                 toast.success('Сервис удален');
                 fetchConfigs(currentPage, servicesData.per_page, sortParam);
             } catch (error) {
-                toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса');
+                if (error?.status != 401)
+                    toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса', {toastId: "unique-message-23"});
             }
         }
     };
@@ -306,8 +310,9 @@ export default function Configs() {
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
                             {config.name}
                         </h3>
+                    
                     </div>
-
+                    {config?.service_available && (
                     <div className="flex gap-2">
                         {config.description && (
                             <button
@@ -364,7 +369,7 @@ export default function Configs() {
                             Просмотр конфигурации
 
                         </button>
-                    </div>
+                    </div> )}
                 </div>
 
                 {opendescriptionId === config.id && (
@@ -503,6 +508,25 @@ export default function Configs() {
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
                             {config.name}
                         </h3>
+                        <span className='w-fit p-2 py-1 text-xs rounded-full bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center'>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+        </svg>
+                            <h4>
+                        
+        {config?.service_name}
+                        </h4>
+                        
+                    </span>
+                    {!config?.service_available && (
+                    <span className={`w-fit p-2 py-1 text-xs rounded-full ${
+                            config?.service_available 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                            Недоступен
+                        </span>
+                        )}
                     </div>
 
                     <div className="flex gap-2">
@@ -521,11 +545,14 @@ export default function Configs() {
 
                             </button>
                         )}
+                        {config?.service_available && (
+                            <>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenAdminPanel(config);
                             }}
+                            
                             className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
                                                 >
                                                     <svg
@@ -559,6 +586,8 @@ export default function Configs() {
                             Просмотр конфигурации
 
                         </button>
+                        </>
+                        )}
                     </div>
                 </div>
 
@@ -634,7 +663,7 @@ export default function Configs() {
                             {admin && (
                                 <button
                                     onClick={handleCreateClick}
-                                    className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-5"
+                                    className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[300px] group me-5"
                                 >
                                     <svg 
                                         xmlns="http://www.w3.org/2000/svg" 

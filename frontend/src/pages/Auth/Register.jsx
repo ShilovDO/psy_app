@@ -50,7 +50,8 @@ export default function Register() {
 
         } catch (error) {
             // Обработка ошибок при отправке ответа
-            toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`); // Отображаем сообщение об ошибке
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`, {toastId: "unique-message-19"}); // Отображаем сообщение об ошибке
         } finally {
             setLoading(false); // Устанавливаем состояние загрузки в false в любом случае (успех или ошибка)
             resetField('password');
@@ -183,7 +184,7 @@ export default function Register() {
                                 required: false
                             })}>
                                 <RadioButton>
-                                    Клиент
+                                Диагностируемый
                                 </RadioButton>
                                     
                                 <RadioButton>

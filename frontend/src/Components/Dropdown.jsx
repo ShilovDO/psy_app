@@ -1,30 +1,109 @@
 import { Transition } from '@headlessui/react';
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Link } from "react-router-dom";
 
 const DropDownContext = createContext();
+const DropDownGroupContext = createContext();
+
+// Компонент-обертка для группы dropdown
+const DropdownGroup = ({ children }) => {
+    const [activeDropdown, setActiveDropdown] = useState(null);
+
+    const registerDropdown = useCallback((id) => {
+        setActiveDropdown(id);
+    }, []);
+
+    const unregisterDropdown = useCallback((id) => {
+        setActiveDropdown(prev => prev === id ? null : prev);
+    }, []);
+
+    return (
+        <DropDownGroupContext.Provider value={{ 
+            activeDropdown, 
+            registerDropdown, 
+            unregisterDropdown 
+        }}>
+            {children}
+        </DropDownGroupContext.Provider>
+    );
+};
 
 const Dropdown = ({ children }) => {
     const [open, setOpen] = useState(false);
+    const [id] = useState(() => Math.random().toString(36).substr(2, 9));
+    const groupContext = useContext(DropDownGroupContext);
 
-    const toggleOpen = () => {
-        setOpen((previousState) => !previousState);
-    };
+    const toggleOpen = useCallback(() => {
+        setOpen((previousState) => {
+            const newState = !previousState;
+            
+            // Если открываем dropdown
+            if (newState && groupContext) {
+                groupContext.registerDropdown(id);
+            } 
+            // Если закрываем dropdown
+            else if (!newState && groupContext) {
+                groupContext.unregisterDropdown(id);
+            }
+            
+            return newState;
+        });
+    }, [groupContext, id]);
 
+    // Закрываем dropdown, если открыт другой
+    useEffect(() => {
+        if (groupContext && groupContext.activeDropdown && groupContext.activeDropdown !== id) {
+            setOpen(false);
+        }
+    }, [groupContext?.activeDropdown, id]);
+
+    // Закрытие по Escape
     useEffect(() => {
         const handleEscape = (e) => {
             if (e.key === 'Escape') {
                 setOpen(false);
+                if (groupContext) {
+                    groupContext.unregisterDropdown(id);
+                }
             }
         };
 
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, []);
+    }, [groupContext, id]);
+
+    // Клик вне dropdown
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (open && !e.target.closest('[data-dropdown-id="' + id + '"]')) {
+                setOpen(false);
+                if (groupContext) {
+                    groupContext.unregisterDropdown(id);
+                }
+            }
+        };
+
+        if (open) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [open, groupContext, id]);
+
+    const contextValue = { 
+        open, 
+        setOpen: (newOpen) => {
+            setOpen(newOpen);
+            if (!newOpen && groupContext) {
+                groupContext.unregisterDropdown(id);
+            }
+        }, 
+        toggleOpen,
+        id 
+    };
 
     return (
-        <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
-            <div className="relative">{children}</div>
+        <DropDownContext.Provider value={contextValue}>
+            <div className="relative" data-dropdown-id={id}>{children}</div>
         </DropDownContext.Provider>
     );
 };
@@ -139,4 +218,5 @@ Dropdown.Trigger = Trigger;
 Dropdown.Content = Content;
 Dropdown.Link = DropdownLink;
 
+export { DropdownGroup };
 export default Dropdown;

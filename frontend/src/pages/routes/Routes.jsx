@@ -1,4 +1,5 @@
 import {useEffect, useState} from "react";
+import {useContext} from "react";
 import {api} from "../../api/api.js";
 import {toast} from "react-toastify";
 import Spiner from "../../Components/Spiner.jsx";
@@ -7,6 +8,11 @@ import {useNavigate, useSearchParams} from "react-router-dom";
 import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import Avatar from "../../Components/Avatar.jsx";
+import UseThemeContext from "../../hooks/useThemeContext.js";
+
+
+
+
 const PER_PAGE_OPTIONS = [
     { value: 5, label: "5 записей" },
     { value: 10, label: "10 записей" },
@@ -33,6 +39,10 @@ const ROUTE_TYPE_OPTIONS = [
 ];
 
 export default function AppRoutes() {
+  const context = useContext(UseThemeContext);
+  // Берём state пользователя для взятия из него информации
+  const { user, getInfoBase } = context;
+
   const [routesData, setRoutesData] = useState({
     items: [],
     total: 0,
@@ -59,7 +69,7 @@ export default function AppRoutes() {
   let currentPage = parseInt(searchParams.get("page")) || 1;
 
   useEffect(() => {
-
+    getInfoBase();
     const handleEsc = (event) => {
         if (event.key === "Escape") setIsModalOpen(false);
     };
@@ -77,11 +87,12 @@ export default function AppRoutes() {
         setRoutesData(response.data);
       } else {
         setRoutesData(prev => ({...prev, items: []}));
-        toast.error("Не удалось получить список маршрутов");
+        // toast.error("Не удалось получить список маршрутов");
+        throw new Error("Не удалось получить список маршрутов");
       }
     } catch (error) {
         if (error.status != 401){
-          toast.error(error?.message || "Ошибка при получении данных с сервера.");
+          toast.error(error?.message || "Ошибка при получении данных с сервера.", {toastId: "unique-message-47"});
         }     
         console.error("Ошибка при загрузке маршрутов:", error);
     } finally {
@@ -119,7 +130,8 @@ export default function AppRoutes() {
       }
     } catch (error) {
       if(error.status !== 200){
-        toast.error(error.message || `Ошибка при загрузке станций для маршрута ${routeId}`);
+        if (error?.status != 401)
+          toast.error(error.message || `Ошибка при загрузке станций для маршрута ${routeId}`, {toastId: "unique-message-48"});
       }
 
       console.error("Ошибка:", error);
@@ -147,7 +159,7 @@ export default function AppRoutes() {
         });
       } catch (error) {
         if (error.status != 401) {
-            toast.error(error.message || "Ошибка при скрытии/активации маршрута");
+            toast.error(error.message || "Ошибка при скрытии/активации маршрута", {toastId: "unique-message-49"});
         }
 
       }
@@ -181,7 +193,8 @@ export default function AppRoutes() {
         setUsersSearchOut(response.data);
         
     } catch (error) {
-        toast.error(error.response?.data?.detail || "Ошибка");
+      if (error?.status != 401)
+        toast.error(error.response?.data?.detail || "Ошибка", {toastId: "unique-message-53"});
     }
 };
   const handleChangeSearchIn = async (e) => {
@@ -191,7 +204,8 @@ export default function AppRoutes() {
         const response = await api.searchInUsers(e == null ? searchIn : e.target.value, currentRoute);
         setUsersSearchIn(response.data);      
     } catch (error) {
-        toast.error(error.response?.data?.detail || "Ошибка");
+      if (error?.status != 401)
+        toast.error(error.response?.data?.detail || "Ошибка", {toastId: "unique-message-52"});
     }
   };
   
@@ -201,7 +215,8 @@ export default function AppRoutes() {
         handleChangeSearchIn(null);
         handleChangeSearchOut(null);
     } catch (error) {
-        toast.error(error.response?.data?.detail || "Ошибка");
+      if (error?.status != 401)
+        toast.error(error.response?.data?.detail || "Ошибка", {toastId: "unique-message-51"});
     }
   };
 
@@ -268,6 +283,7 @@ export default function AppRoutes() {
                       <path d="M4 5H20L14 12V17L10 14V12L4 5Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
                   </button>)}
+                  {user?.admin !== null && (
                   <select
                           value={routeTypeParam}
                           onChange={handleRouteTypeChange}
@@ -279,6 +295,7 @@ export default function AppRoutes() {
                             </option>
                         ))}
                       </select>
+                      )}
                     <select
                           value={visibleParam}
                           onChange={handleVisibleChange}
@@ -312,6 +329,7 @@ export default function AppRoutes() {
                             </option>
                         ))}
                       </select>
+                      {user.admin != null && (
                       <button
                     onClick={() => {navigate("create-route")}}
                     className="flex р-11 items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-2"
@@ -329,6 +347,7 @@ export default function AppRoutes() {
                         Добавить маршрут
                     </span>
                   </button>
+                  )}
                   </div>
   
                 </div>
@@ -400,12 +419,16 @@ export default function AppRoutes() {
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content   side="right">
-                                    <Dropdown.Link
+                                    {route.is_owner && (
+                                          
+                                        
+                                      <>                                    <Dropdown.Link
                                             as="button"
                                             onClick={() => handleOpenModal(route.id)}
                                            
                                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
                                         >
+                                        
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
                                             className="h-5 w-5 mr-2"
@@ -444,7 +467,8 @@ export default function AppRoutes() {
                                             </svg>
                                             Создать на основе
                                         </Dropdown.Link>
-
+                                        </>
+)}
                                         <Dropdown.Link
                                             as="button"
                                             onClick={() => handleDelete(route.id)}
@@ -629,7 +653,7 @@ export default function AppRoutes() {
                                     {user.mail}
                                 </p>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
+                                    {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Диагностируемый"}
                                 </div>
                             </div>
                             <button 
@@ -670,7 +694,7 @@ export default function AppRoutes() {
                                                   {user.mail}
                                               </p>
                                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                  {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Клиент"}
+                                                  {user.admin ? 'Администратор' : user.admin == false ? 'Психолог' : "Диагностируемый"}
                                               </div>
                                           </div>
                                           <button 

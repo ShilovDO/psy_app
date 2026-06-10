@@ -1,0 +1,20 @@
+# Dockerfile.backend
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Копируем package.json бэкенда
+COPY server/package*.json ./server/
+
+WORKDIR /app/server
+RUN npm ci --only=production
+
+WORKDIR /app
+COPY server ./server
+
+# Устанавливаем переменную окружения для production
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+CMD ["node", "server/server.js"]

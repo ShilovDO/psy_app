@@ -102,7 +102,11 @@ export default function useTheme () {
             // Обработка ошибок при отправке ответа
             
             setUser(null);
-            toast.error((error?.message || '[тест]Ошибка при получении данных с сервера') + ` Код: ${error?.status}`); // Отображаем сообщение об ошибке
+            if (error?.status == 423) {
+                localStorage.removeItem(ACCESS_TOKEN);
+            }
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера') + ` Код: ${error?.status}`, {toastId: "unique-message-1" }); // Отображаем сообщение об ошибке
         } finally {
             setLoading(false); // Устанавливаем состояние загрузки в false в любом случае (успех или ошибка)
             setUserGetting(true);
@@ -119,7 +123,8 @@ export default function useTheme () {
             document.cookie = `tdark=${theme}; ${expires}; path=/`;
         } catch (error) {
             // Обработка ошибок при отправке ответа
-            toast.error((error?.message || 'Ошибка установки темы')); // Отображаем сообщение об ошибке
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка установки темы'), {toastId: "unique-message-2"}); // Отображаем сообщение об ошибке
         }
     };
 

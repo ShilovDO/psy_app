@@ -17,6 +17,7 @@ import RoutePlayer from './pages/routes/RoutePlayer';
 import GuestLayout from './Layouts/GuestLayout';
 import Configs from './pages/configs/Configs.jsx'
 import Results from './pages/results/Results.jsx'
+import OrientationLayout from './Layouts/OrientationLayout.jsx'
 
 function App() {
     return (
@@ -25,6 +26,7 @@ function App() {
             <Router>
                 <Routes>
                     <Route element={<GeneralLayout/>}>
+                    <Route element={<OrientationLayout/>}>
                         {/* Общие публичные маршруты (если есть) */}
                         
                         {/* Аутентифицированные маршруты */}
@@ -48,7 +50,7 @@ function App() {
                             <Route path="login" element={<Login/>}/>
                         </Route>
                         <Route path="*" element={<NotFound/>}/>
-                        
+                        </Route>
                     </Route>
                 </Routes>
             </Router>

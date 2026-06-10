@@ -55,7 +55,8 @@ export default function RoutePlayer() {
                 }
 
             } catch (error) {
-                toast.error("Ошибка при загрузке маршрута");
+                if (error?.status != 401)
+                    toast.error("Ошибка при загрузке маршрута", {toastId: "unique-message-43"});
                 console.error(error);
                 navigate("/routes");
             } finally {
@@ -83,7 +84,10 @@ const handleNextStation = async () => {
     console.info("Объект current station");
     console.info(currentStation);
     const datetime = new Date().toISOString();
-    
+    // if (!currentStation?.available && currentStation?.next == 0){
+
+    //     return;
+    // }
     if (currentStation.admin) {
         // Записываем результат
         const result = await api.createResult({
@@ -122,7 +126,8 @@ const handleNextStation = async () => {
                     id: result.data.id,
                 });
                 console.info("Ошибка при отправке результата:", error);
-                toast.error("Результат не был сохранён из-за сбоя сервиса");               
+                if (error?.status != 401)
+                    toast.error("Результат не был сохранён из-за сбоя сервиса", {toastId: "unique-message-44"});               
             }
         }
     }
@@ -131,14 +136,14 @@ const handleNextStation = async () => {
         setIsTransitioning(true);
 
         // Обновляем статус станции через бекенд
-        await api.changeStation({
-            id: currentStation.id,
-            number: currentStation.number,
-            entry: true,
-            next: currentStation.next,
-            config: currentStation.config_id,
-            description: currentStation.description || ""
-        });
+        // await api.changeStation({
+        //     id: currentStation.id,
+        //     number: currentStation.number,
+        //     entry: true,
+        //     next: currentStation.next,
+        //     config: currentStation.config_id,
+        //     description: currentStation.description || ""
+        // });
         
         // Обновляем локальное состояние
         const updatedStations = [...stations];
@@ -155,19 +160,19 @@ const handleNextStation = async () => {
             
             // Проверяем доступность следующей станции
             if (stations[currentStationIndex + 1]?.available === false) {
-                setShowUnavailableModal(true);
+                // setShowUnavailableModal(true);
             }
         }, 500);
     } else {
         // Маршрут завершен - обновляем последнюю станцию
-        await api.changeStation({
-            id: currentStation.id,
-            number: currentStation.number,
-            entry: true,
-            next: currentStation.next,
-            config: currentStation.config_id,
-            description: currentStation.description || ""
-        });
+        // await api.changeStation({
+        //     id: currentStation.id,
+        //     number: currentStation.number,
+        //     entry: true,
+        //     next: currentStation.next,
+        //     config: currentStation.config_id,
+        //     description: currentStation.description || ""
+        // });
 
         // Обновляем локальное состояние
         const updatedStations = [...stations];
@@ -184,14 +189,14 @@ const handleNextStation = async () => {
             setIsTransitioning(true);
             
             // Помечаем станцию как пройденную
-            await api.changeStation({
-                id: currentStation.id,
-                number: currentStation.number,
-                entry: true,
-                next: currentStation.next,
-                config: currentStation.config_id,
-                description: currentStation.description || ""
-            });
+            // await api.changeStation({
+            //     id: currentStation.id,
+            //     number: currentStation.number,
+            //     entry: true,
+            //     next: currentStation.next,
+            //     config: currentStation.config_id,
+            //     description: currentStation.description || ""
+            // });
 
             // Обновляем локальное состояние
             const updatedStations = [...stations];
@@ -199,7 +204,7 @@ const handleNextStation = async () => {
             setStations(updatedStations);
 
             setCompletedStations(prev => [...prev, stations[currentStationIndex]]);
-            setShowUnavailableModal(false);
+            // setShowUnavailableModal(false);
 
             // Переходим к следующей станции
             setTimeout(() => {
@@ -207,7 +212,8 @@ const handleNextStation = async () => {
                 setIsTransitioning(false);
             }, 500);
         } catch (error) {
-            toast.error("Ошибка при обновлении статуса станции");
+            if (error?.status != 401)
+             toast.error("Ошибка при обновлении статуса станции", {toastId: "unique-message-45"});
             console.error(error);
             setIsTransitioning(false);
         }
@@ -217,16 +223,16 @@ const handleNextStation = async () => {
     const handleCompleteRoute = async () => {
         try {
             // Сбрасываем все станции в непройденные через бекенд
-            for (const station of stations) {
-                await api.changeStation({
-                    id: station.id,
-                    number: station.number,
-                    entry: false,
-                    next: station.next,
-                    config: station.config_id,
-                    description: currentStation.description || ""
-                });
-            }
+            // for (const station of stations) {
+            //     await api.changeStation({
+            //         id: station.id,
+            //         number: station.number,
+            //         entry: false,
+            //         next: station.next,
+            //         config: station.config_id,
+            //         description: currentStation.description || ""
+            //     });
+            // }
 
             // Обновляем локальное состояние
             const resetStations = stations.map(station => ({
@@ -239,14 +245,15 @@ const handleNextStation = async () => {
             toast.success("Маршрут успешно завершен!");
             navigate("/routes");
         } catch (error) {
-            toast.error("Ошибка при завершении маршрута");
+            if (error?.status != 401)
+                toast.error("Ошибка при завершении маршрута");
             console.error(error);
         }
     };
 
     // Обработчик выхода из маршрута
     const handleExitRoute = () => {
-        if (window.confirm("Вы уверены, что хотите прервать прохождение маршрута?")) {
+        if (window.confirm("Вы уверены, что хотите прервать прохождение маршрута?", {toastId: "unique-message-46"})) {
             navigate("/routes");
         }
     };
@@ -254,7 +261,7 @@ const handleNextStation = async () => {
     // Обработчик открытия станции
     const handleOpenStation = () => {
         if (currentStation?.available === false) {
-            setShowUnavailableModal(true);
+            // setShowUnavailableModal(true);
         } else {
             setShowStationModal(true);
         }
@@ -347,7 +354,8 @@ const handleNextStation = async () => {
                             </div>
                         </div>
 
-                        {!currentStation.entry && currentStation.available ? (
+                        {currentStation?.available ? (
+                        // {!currentStation?.entry && currentStation?.available ? (
                             <motion.button 
                                 whileHover={{ scale: 1.03 }}
                                 whileTap={{ scale: 0.98 }}
@@ -361,7 +369,8 @@ const handleNextStation = async () => {
                             ""
                         )}
 
-                        {currentStationIndex === stations.length - 1 && currentStation.entry && (
+                        {/* {currentStationIndex === stations.length - 1 && (
+                        // {currentStationIndex === stations.length - 1 && currentStation.entry && (
                             <motion.button 
                                 whileHover={{ scale: 1.03 }}
                                 whileTap={{ scale: 0.98 }}
@@ -370,7 +379,7 @@ const handleNextStation = async () => {
                             >
                                 Завершить маршрут
                             </motion.button>
-                        )}
+                        )} */}
                     </div>
                 </div>
             </div>
@@ -399,7 +408,7 @@ const handleNextStation = async () => {
                                     <div className="mt-4">
                                         <button
                                             type="button"
-                                            onClick={handleSkipUnavailableStation}
+                                            onClick={handleNextStation}
                                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
                                         >
                                             Пропустить станцию
@@ -605,7 +614,7 @@ const handleNextStation = async () => {
                                     <button
                                         type="button"
                                         className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                                        onClick={() => setShowUnavailableModal(false)}
+                                        // onClick={() => setShowUnavailableModal(false)}
                                     >
                                         Отмена
                                     </button>

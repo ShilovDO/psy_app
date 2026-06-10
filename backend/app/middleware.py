@@ -50,6 +50,13 @@ async def auth_middleware(request: Request, call_next):
         # Получаем пользователя
 
         user = await get_current_user(token)
+
+        if user.active == False:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail="Пользователь заблокирован",
+            )
+
         if isinstance(user, JSONResponse):
             return user
 

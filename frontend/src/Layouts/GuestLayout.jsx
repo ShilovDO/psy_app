@@ -42,8 +42,6 @@ export default function GuestLayout() {
         <div>
             {loading ? (<Spiner/>) : (
                 <>
-            <p>{from}</p>
-            <p>{user?.id}</p>
             <div
                 className="flex flex-col items-center h-screen bg-gray-100 pt-6 sm:justify-center sm:pt-0 dark:bg-gray-900">
 

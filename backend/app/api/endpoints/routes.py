@@ -161,17 +161,22 @@ async def change_route(route: ChangeRoute, db: Session = Depends(get_db)):
 
 
 @router.post("/share_route")
-async def share_route(request: ShareRouteRequest, db: Session = Depends(get_db)):
+async def share_route(request: Request, share: ShareRouteRequest, db: Session = Depends(get_db)):
+    check_route = db.query(Routes).filter(Routes.id == share.route_id).first()
+    if check_route.owner != request.state.user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Маршрут не принадлежит вам"
+        )
     check_share = db.query(UsersRoutes).filter(
-        UsersRoutes.route_id == request.route_id, 
-        UsersRoutes.user_id == request.user_id
+        UsersRoutes.route_id == share.route_id, 
+        UsersRoutes.user_id == share.user_id
     ).first()   
     if check_share:
         db.delete(check_share)
         db.commit()
         return {"message": "Маршрут удалён из общего доступа"}
     else:
-        shared_route = UsersRoutes(user_id=request.user_id, route_id=request.route_id, visible=True)
+        shared_route = UsersRoutes(user_id=share.user_id, route_id=share.route_id, visible=True)
         db.add(shared_route)
         db.commit()
         db.refresh(shared_route)

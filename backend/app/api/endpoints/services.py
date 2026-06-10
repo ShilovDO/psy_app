@@ -11,6 +11,8 @@ router = APIRouter()
 async def create_service(
     service: NewService, request: Request, db: Session = Depends(get_db)
 ):
+
+    
     new_service = Services(
         name=service.name,
         url=service.url,
@@ -32,7 +34,13 @@ async def create_service(
         db.add(config)
         db.commit()
         db.refresh(config)
-    return new_service
+    return {"id": new_service.id,
+            "name": new_service.name,
+            "url": new_service.url,
+            "available": new_service.available,
+            "admin": new_service.admin,
+            "instruction": new_service.instruction
+        }
 
 
 @router.post("/change_service")
@@ -57,14 +65,18 @@ async def change_service(service: Service, db: Session = Depends(get_db)):
 @router.post("/delete_service")
 async def delete_service(service: Service, db: Session = Depends(get_db)):
     check_service = db.query(Services).filter(Services.id == service.id).first()
-    print(check_service)
     if check_service:
-        user_service = db.query(Services).filter(Services.id == service.id).delete()
-        return check_service
+        check_service.available = not check_service.available
+        db.commit()
+        db.refresh(check_service)
+        return {
+            "id": check_service.id,
+            "active": check_service.available
+        }
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message="Не удаётся удалить сервис. Попролбуйте в другой раз...",
+            message="Не удаётся отключить сервис. Попролбуйте в другой раз...",
         )
 
 
@@ -212,5 +224,5 @@ async def available_service(
 
 @router.get("/configurable_service")
 async def configurable_service(db: Session = Depends(get_db)):
-    services = db.query(Services).filter(Services.admin == True).all()
+    services = db.query(Services).filter(Services.admin == True).filter(Services.available == True).all()
     return {"items": services}

@@ -8,6 +8,9 @@ import Pagination from "../../Components/Pagination.jsx";
 import Dropdown from "../../Components/Dropdown.jsx";
 import {useSearchParams} from "react-router-dom";
 import { useMemo } from 'react';
+import Avatar from "../../Components/Avatar.jsx";
+import UserSelect from "../../Components/UserSelect.jsx";
+import Select from "../../Components/Select.jsx";
 
 export default function Results() {
     const [loadingServices, setLoadingServices] = useState(false);
@@ -18,6 +21,10 @@ export default function Results() {
         per_page: 10,
         total_pages: 1
     });
+    const testUsers = [
+        { id: '1', username: 'Тест 1' },
+        { id: '2', username: 'Тест 2' },
+    ];
     const [servicesDataUser, setServicesDataUser] = useState({
         items: [],
         total: 0,
@@ -112,8 +119,9 @@ export default function Results() {
                 setServices(response.data.items);
             }
         } catch (error) {
-            toast.error("Не удалось загрузить список сервисов");
-            console.error("Ошибка загрузки сервисов:", error);
+            if (error?.status != 401)
+                toast.error("Не удалось загрузить список сервисов", {toastId: "unique-message-31"});
+            console.error("Ошибка загрузки сервисов:", error, {toastId: "unique-message-30"});
         } finally {
             setLoadingServices(false);
         }
@@ -122,13 +130,14 @@ export default function Results() {
     const fetchUsers = async () => {
         try {
             setLoadingServices(true);
-            const response = await api.getUsers();
-            if (response?.data?.items) {
-                setUsers([{id: 0, username: "Пользователь", mail: "", admin: false}, ...response.data.items]);
-                
+            const response = await api.getUsersForResults();
+            if (response?.data) {
+                setUsers([{id: 0, username: "Пользователь", mail: "", admin: false, photo: ""}, ...response.data]);
             }
+            console.info(response?.data?.items)
         } catch (error) {
-            toast.error("Не удалось загрузить список пользователей");
+            if (error?.status != 401)
+                toast.error("Не удалось загрузить список пользователей", {toastId: "unique-message-32"});
             console.error("Ошибка загрузки пользователей:", error);
         } finally {
             setLoadingServices(false);
@@ -144,7 +153,8 @@ export default function Results() {
                 
             }
         } catch (error) {
-            toast.error("Не удалось загрузить список конфигураций");
+            if (error?.status != 401)
+                toast.error("Не удалось загрузить список конфигураций", {toastId: "unique-message-33"});
             console.error("Ошибка загрузки конфигураций:", error);
         } finally {
             setLoadingServices(false);
@@ -160,8 +170,9 @@ export default function Results() {
                 
             }
         } catch (error) {
-            toast.error("Не удалось загрузить список маршрутов");
-            console.error("Ошибка загрузки маршрутов:", error);
+            if (error?.status != 401)
+                toast.error("Не удалось загрузить список маршрутов", {toastId: "unique-message-31"});
+            console.error("Ошибка загрузки маршрутов:", error, {toastId: "unique-message-34"});
         } finally {
             setLoadingServices(false);
         }
@@ -196,7 +207,8 @@ export default function Results() {
                 setConfigsData(responseUser.data)               
       
         } catch (error) {
-            toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`, {toastId: "unique-message-35"});
             console.error('Ошибка при загрузке сервисов:', error);
         } finally {
             setLoading(false);
@@ -280,7 +292,8 @@ export default function Results() {
             }
         } catch (error) {
             console.error('Full error:', error);
-            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`);
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`, {toastId: "unique-message-36"});
         }
     };
 
@@ -294,7 +307,8 @@ export default function Results() {
                 toast.success('Сервис удален');
                 fetchConfigs(currentPage, servicesData.per_page, sortParam);
             } catch (error) {
-                toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса');
+                if (error?.status != 401)
+                    toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса', {toastId: "unique-message-37"});
             }
         }
     };
@@ -316,24 +330,25 @@ export default function Results() {
         setSearchParams({page: 1});
     };
 
-    
-    const handleUserChange = (e) => {
-        const newUser = parseInt(e.target.value);
+
+    const handleUserChange = (userId) => {
+        const newUser = parseInt(userId);
         setUserParam(newUser);
         localStorage.setItem('user_filter', newUser.toString());
         setSearchParams({page: 1});
     };
-
-    const handleConfigChange = (e) => {
-        const newConfig = parseInt(e.target.value);
-        setConfigParam(newConfig);
-        localStorage.setItem('config_filter', newConfig.toString());
-        setSearchParams({page: 1});
-    };
-    const handleRouteChange = (e) => {
-        const newRoute = parseInt(e.target.value);
+    
+    const handleRouteChange = (routeId) => {
+        const newRoute = parseInt(routeId);
         setRouteParam(newRoute);
         localStorage.setItem('route_filter', newRoute.toString());
+        setSearchParams({page: 1});
+    };
+    
+    const handleConfigChange = (configId) => {
+        const newConfig = parseInt(configId);
+        setConfigParam(newConfig);
+        localStorage.setItem('config_filter', newConfig.toString());
         setSearchParams({page: 1});
     };
 
@@ -551,8 +566,28 @@ export default function Results() {
 
     const usersById = useMemo(() => {
         const map = {};
+        console.info("мы тут")
         users.forEach(user => {
+            console.info("userinfo")
+            console.info(user)
             map[user.id] = user.username; // или user.username, если поле так называется
+        });
+        return map;
+    }, [users]);
+
+    const usersEmailById = useMemo(() => {
+        const map = {};
+        users.forEach(user => {
+            map[user.id] = user.mail; // или user.username, если поле так называется
+        });
+        return map;
+    }, [users]);
+
+
+    const usersPhotoById = useMemo(() => {
+        const map = {};
+        users.forEach(user => {
+            map[user.id] = user.photo; // или user.username, если поле так называется
         });
         return map;
     }, [users]);
@@ -564,6 +599,7 @@ export default function Results() {
         });
         return map;
     }, [configs]);
+    
 
     const routesById = useMemo(() => {
         const map = {};
@@ -595,6 +631,12 @@ export default function Results() {
 </svg>
                             {`Дата: ${new Date(config.date_time).toLocaleString('ru-RU')}`}
                         </h3>
+                        <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+        </svg>
+                            {`Сервис: ${config.service_name}`}
+                        </h3>
                         {/* <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
                         <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -624,6 +666,40 @@ export default function Results() {
 </svg>
                             {`Конфигурация: ${configsById[config.config] ? configsById[config.config] : ""}`}
                         </h3>
+                        <h3 className="flex flex-row items-center text-lg font-medium text-gray-900 dark:text-gray-200">
+                        <svg
+  xmlns="http://www.w3.org/2000/svg"
+  className="h-5 w-5 flex-shrink-0 me-1"
+  viewBox="0 0 20 20"
+  fill="currentColor"
+>
+  <path
+    fill-rule="evenodd"
+    d="M10 2a3 3 0 100 6 3 3 0 000-6zM5 14a5 5 0 0110 0v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1z"
+    clip-rule="evenodd"
+  />
+</svg>
+                            {`Тестируемый:`}
+                        </h3>
+                        <div className="flex-1 ms-5 bg-white dark:bg-gray-800 flex items-center gap-3 rounded-l-full rounded-r-full shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+    <Avatar 
+        email={usersEmailById[config?.user]} 
+        avatarUrl={usersPhotoById[config?.user]} 
+        size="xl" 
+        className="me-1 ring-2 ring-white dark:ring-gray-700 shadow-sm" 
+    />
+    <div className="flex-1 py-2 pe-4 rounded-r-4xl">
+        <p className="text-base font-semibold text-gray-800 truncate dark:text-gray-100 rounded-r-4xl">
+            {usersById[config?.user]}
+        </p>
+        {usersEmailById[config?.user] && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate rounded-r-4xl">
+                {usersEmailById[config?.user]}
+            </p>
+        )}
+    </div>
+</div>
+                        
                     </div>
 
                     <div className="flex gap-2">
@@ -642,7 +718,7 @@ export default function Results() {
 
                             </button>
                         )}
-
+                        {config.service_available ? (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -663,6 +739,11 @@ export default function Results() {
                             Просмотр результата
 
                         </button>
+                        ) : (
+                            <span className='w-fit p-2 py-1 text-xm rounded-full bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100'>
+                            Сервис отключен. Просмотр результата невозможен!
+                        </span>
+                        )}
                     </div>
                 </div>
 
@@ -733,40 +814,29 @@ export default function Results() {
                                             </option>
                                         ))}
                                     </select>
-                                    {/* <select
-                                        value={userParam}
-                                        onChange={handleUserChange}
-                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    >
-                                        {users.map((opt) => (
-                                            <option key={opt.id} value={opt.id}>
-                                                {opt.username}
-                                            </option>
-                                        ))}
-                                    </select> */}
+                                   
+<UserSelect
+    users={users}
+    value={userParam}
+    onChange={handleUserChange}
+    placeholder="Выберите пользователя"
+/>
 
-                                    <select
-                                        value={routeParam}
-                                        onChange={handleRouteChange}
-                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    >
-                                        {routes.map((opt) => (
-                                            <option key={opt.id} value={opt.id}>
-                                                {opt.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={configParam}
-                                        onChange={handleConfigChange}
-                                        className="p-2 rounded-md border dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    >
-                                        {configs.map((opt) => (
-                                            <option key={opt.id} value={opt.id}>
-                                                {opt.name}
-                                            </option>
-                                        ))}
-                                    </select>
+
+<Select
+    options={routes}
+    value={routeParam}
+    onChange={handleRouteChange}
+    placeholder="Выберите маршрут"
+/>
+
+
+<Select
+    options={configs}
+    value={configParam}
+    onChange={handleConfigChange}
+    placeholder="Выберите конфигурацию"
+/>
                                 </div>
                             </div>
                         

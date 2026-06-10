@@ -28,11 +28,11 @@ export default function ProfileInformation({
         const file = e.target.files[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            toast.error("Пожалуйста, выберите изображение");
+            toast.error("Пожалуйста, выберите изображение", {toastId: "unique-message-25"});
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast.error("Файл не должен превышать 5 МБ");
+            toast.error("Файл не должен превышать 5 МБ", {toastId: "unique-message-26"});
             return;
         }
 
@@ -140,7 +140,7 @@ export default function ProfileInformation({
     const handleSaveCrop = async () => {
         const blob = await getCroppedBlob();
         if (!blob) {
-            toast.error("Невозможно сохранить без выделения области");
+            toast.error("Невозможно сохранить без выделения области", {toastId: "unique-message-27"});
             return;
         }
 
@@ -157,11 +157,12 @@ export default function ProfileInformation({
                 setImgSrc(null);
                 setCompletedCrop(null);
             } else {
-                toast.error("Ошибка загрузки");
+                toast.error("Ошибка загрузки", {toastId: "unique-message-28"});
                 throw new Error('Ошибка загрузки');
             }
         } catch (err) {
-            toast.error("Ошибка загрузки");
+            if (error?.status != 401)
+                toast.error("Ошибка загрузки", {toastId: "unique-message-29"});
             console.error('Ошибка:', err);
         } finally {
             setIsUploading(false);

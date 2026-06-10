@@ -40,7 +40,8 @@ export default function CreateRoute() {
                     setServices(response.data);
                 }
             } catch (error) {
-                toast.error("Не удалось загрузить список сервисов");
+                if (error?.status != 401)
+                  toast.error("Не удалось загрузить список сервисов", {toastId: "unique-message-38"});
                 console.error("Ошибка загрузки сервисов:", error);
             } finally {
                 setLoadingServices(false);
@@ -89,7 +90,7 @@ export default function CreateRoute() {
         }
 
         if (stations.length === 0) {
-            toast.error("Добавьте хотя бы одну станцию");
+            toast.error("Добавьте хотя бы одну станцию", {toastId: "unique-message-41"});
             return;
         }
 
@@ -116,7 +117,8 @@ export default function CreateRoute() {
             navigate("/routes");
         } catch (error) {
             console.error("Ошибка при создании маршрута:", error);
-            toast.error(error.response?.data?.detail || "Ошибка при создании маршрута");
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || "Ошибка при создании маршрута", {toastId: "unique-message-42"});
         } finally {
             setLoading(false);
         }

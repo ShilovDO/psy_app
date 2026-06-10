@@ -13,6 +13,14 @@ router = APIRouter()
 async def create_config(
     config_data: NewConfig, request: Request, db: Session = Depends(get_db)
 ):
+    check_service = db.query(Services).filter(Services.id == config_data.service.id).first()
+
+    if (check_service.available == False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Сервис временно недоступен.",
+        )    
+
     user_id = request.state.user.id
 
     # Создаём новую конфигурацию
@@ -92,12 +100,14 @@ async def all_config(
     # Получаем общее количество конфигураций пользователя
     total = db.query(Configs).filter(Configs.owner == user_id).count()
 
-    # Проверим, есть ли вообще конфигурации у пользователя
-    all_user_configs = db.query(Configs).filter(Configs.owner == user_id).all()
-
-    # Базовый запрос с фильтром по пользователю
+    # Базовый запрос с JOIN для получения данных сервиса
     base_query = (
-        db.query(Configs, Services.url.label("url"))
+        db.query(
+            Configs,
+            Services.url.label("url"),
+            Services.name.label("service_name"),
+            Services.available.label("service_available")
+        )
         .join(Services, Configs.service == Services.id)
         .filter(Configs.owner == user_id)
     )
@@ -115,7 +125,7 @@ async def all_config(
         else:
             query = base_query
     else:
-        base_query = base_query.filter(Configs.service == sort)
+        query = base_query.filter(Configs.service == sort)
 
         # Проверим, есть ли конфигурации с таким service
         service_configs = (
@@ -125,15 +135,13 @@ async def all_config(
         )
 
         if field == "name" and direction == "asc":
-            query = base_query.order_by(Configs.name)
+            query = query.order_by(Configs.name)
         elif field == "name" and direction == "desc":
-            query = base_query.order_by(Configs.name.desc())
+            query = query.order_by(Configs.name.desc())
         elif field == "id" and direction == "asc":
-            query = base_query.order_by(Configs.id)
+            query = query.order_by(Configs.id)
         elif field == "id" and direction == "desc":
-            query = base_query.order_by(Configs.id.desc())
-        else:
-            query = base_query
+            query = query.order_by(Configs.id.desc())
 
     # Применяем пагинацию
     services = query.offset(offset).limit(per_page).all()
@@ -142,12 +150,14 @@ async def all_config(
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
     items = []
-    for config, url in services:
+    for config, url, service_name, service_available in services:
         items.append(
             {
                 "id": config.id,
                 "name": config.name,
                 "service": config.service,
+                "service_name": service_name,
+                "service_available": service_available,
                 "description": config.description,
                 "owner": config.owner,
                 "url": url,

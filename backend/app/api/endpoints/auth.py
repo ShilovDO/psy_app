@@ -32,7 +32,12 @@ async def authenticate_user(
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Неверная поста или пароль",
+                detail="Неверная почта или пароль",
+            )
+        if user.active == False:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail="Пользователь заблокирован",
             )
         if not verify_password(userLogin.password, user.password):
             raise HTTPException(
@@ -52,10 +57,20 @@ async def authenticate_user(
             path="/",
         )
         return {"access_token": access_token, "token_type": "bearer"}
-    except:
-        time.sleep(0.5)
-        pass
-
+    except Exception as e:
+        print(f"Refresh error: {e}")
+        # Проверяем, является ли исключение HTTPException
+        if hasattr(e, 'status_code') and hasattr(e, 'detail'):
+            raise HTTPException(
+                status_code=e.status_code,
+                detail=e.detail
+            )
+        else:
+            # Для OperationalError и других непредвиденных ошибок
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database connection error"
+            )
 
 @router.post("/refresh", response_model=Token)
 async def refreshTokens(
@@ -77,6 +92,13 @@ async def refreshTokens(
             response.delete_cookie(key="refresh_token")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный токен"
+            )
+
+        check_user = db.query(Users).filter(Users.id == user.id).first()
+        if not check_user or check_user.active == False:
+            response.delete_cookie(key="refresh_token")
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED, detail="Пользователя не существует или он неактивен"
             )
 
         access_token = create_access_token(data={"sub": str(user.id)})
@@ -134,7 +156,8 @@ async def registration_user(
         mail=mail,
         password=get_password_hash(password),
         admin=admin,
-        photo=photo_path
+        photo=photo_path,
+        active=True
     )
 
     db.add(new_user)
@@ -145,8 +168,8 @@ async def registration_user(
         status_code=status.HTTP_201_CREATED,
         content={
             "message": "Successfully registration",
-            "access_token": access_token,
-            "token_type": "bearer",
+            "new_user": new_user.id #,
+            #"token_type": "bearer",
         },
     )
 

@@ -50,9 +50,16 @@ async def all_result(
 ):
     offset = (page - 1) * per_page
     user_id = request.state.user.id
-    # Базовый запрос
+    
+    # Базовый запрос с добавлением полей сервиса
     query = (
-        db.query(Results, Services.url.label("url"), Routes.owner.label("owner"))
+        db.query(
+            Results,
+            Services.url.label("url"),
+            Routes.owner.label("owner"),
+            Services.name.label("service_name"),
+            Services.available.label("service_available")
+        )
         .join(Routes, Routes.id == Results.route)
         .join(Configs, Configs.id == Results.config)
         .join(Services, Services.id == Configs.service)
@@ -83,14 +90,19 @@ async def all_result(
 
     items = []
 
-    for result_obj, url, owner in results:
+    for result_obj, url, owner, service_name, service_available in results:
         result_dict = result_obj.__dict__.copy()
 
         # Убираем служебное поле SQLAlchemy
         result_dict.pop("_sa_instance_state", None)
 
         # Добавляем данные из JOIN
-        result_dict.update({"url": url, "owner": owner})
+        result_dict.update({
+            "url": url,
+            "owner": owner,
+            "service_name": service_name,
+            "service_available": service_available
+        })
 
         items.append(result_dict)
 

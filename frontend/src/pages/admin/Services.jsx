@@ -93,7 +93,8 @@ export default function Services() {
                 setServicesDataUser(responseUser.data)               
             }
         } catch (error) {
-            toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`);
+            if (error?.status != 401)
+                toast.error((error?.message || 'Ошибка при получении данных с сервера.') + ` Код ошибки: ${error?.status}`, {toastId: "unique-message-5"});
             console.error('Ошибка при загрузке сервисов:', error);
         } finally {
             setLoading(false);
@@ -167,7 +168,8 @@ export default function Services() {
             }
         } catch (error) {
             console.error('Full error:', error);
-            toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`);
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || `Ошибка при ${isCreating ? 'создании' : 'обновлении'} сервиса`, {toastId: "unique-message-6"});
         }
     };
 
@@ -175,15 +177,21 @@ export default function Services() {
         if (!service?.instruction){
             service.instruction = "";
         }
-        if (window.confirm('Вы уверены, что хотите удалить этот сервис?')) {
-            try {
-                await api.deleteService(service);
-                toast.success('Сервис удален');
-                fetchServices(currentPage, servicesData.per_page, sortParam);
-            } catch (error) {
-                toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса');
+        try {
+            const response = await api.deleteService(service);
+            if (response?.data?.active){
+                toast.success('Сервис успешно включён');
             }
+            else{
+                toast.success('Сервис успешно отключён');
+            }
+            
+            fetchServices(currentPage, servicesData.per_page, sortParam);
+        } catch (error) {
+            if (error?.status != 401)
+                toast.error(error.response?.data?.detail || 'Ошибка при удалении сервиса', {toastId: "unique-message-7"});
         }
+        
     };
 
     const handlePageChange = (newPage) => {
@@ -258,27 +266,14 @@ export default function Services() {
                         }`}>
                             {service.available ? 'Доступен' : 'Недоступен'}
                         </span>
+                        {service.admin && (
+                        <span className='w-fit p-2 py-1 text-xs rounded-full bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100'>
+                            Специально разработанный
+                        </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
-                        {service.admin && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenAdminPanel(service);
-                                }}
-                                className="text-white inline-flex h-11 bg-yellow-500 hover:bg-yellow-600 focus:ring-4 focus:ring-yellow-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-yellow-900 dark:hover:bg-yellow-800 dark:focus:ring-yellow-800 transition-colors duration-300"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 flex-shrink-0 me-1"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                                </svg>
-                                Админ-панель
-                            </button>
-                        )}
+                      
 
                         <Dropdown>
                             <Dropdown.Trigger>
@@ -323,18 +318,13 @@ export default function Services() {
                                         e.stopPropagation();
                                         handleDelete(service);
                                     }}
-                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
+                                    className={`flex items-center px-4 py-2 text-sm ${service?.available ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"} hover:bg-gray-100 dark:hover:bg-gray-600`}
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-5 w-5 mr-2"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Удалить
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18.36 6.64A9 9 0 1 1 5.64 5.64" />
+  <path d="M12 2v10" />
+</svg>
+                                    {service?.available ? 'Отключить' : 'Включить'}
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
@@ -348,14 +338,43 @@ export default function Services() {
         return servicesDataUser.items
             .filter(service => service.available)
             .map(service => (
-            <div key={service.id} className="border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
+            <div key={service.id} className="overflow-visible border border-gray-300 rounded-lg dark:border-gray-700 overflow-hidden mb-4">
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 flex-wrap">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200">
                             {service.name}
                         </h3>
+                        {service.admin && (
+                        <div className="flex items-center gap-2">
+                            <span className='w-fit p-2 py-1 text-xm rounded-full bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100'>
+                                Специально разработанный
+                            </span>
+                            <div className="relative group">
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-5 w-5 text-blue-600 dark:text-blue-400 cursor-help" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                >
+                                    <path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth={2} 
+                                        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                                    />
+                                </svg>
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 whitespace-nowrap z-50 shadow-lg z-0">
+                                    Предпросмотр специально разработанных сервисов доступен через создание новой конфигурации
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                                        <div className="border-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        )}
                     </div>
-
+    
                     <div className="flex gap-2">
                         {service.instruction && (
                             <button
@@ -363,38 +382,41 @@ export default function Services() {
                                     e.stopPropagation();
                                     toggleInstruction(service.id);
                                 }}
-                                className="flex items-center h-11 focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
+                                className="flex items-center me-2 h-11 focus:outline-none text-white bg-indigo-500 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm py-2 px-2 transition-all duration-300 group dark:bg-indigo-800 dark:hover:bg-indigo-700 dark:focus:ring-indigo-900"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
                                 </svg>
                                 {openInstructionId === service.id ? "Скрыть описание" : "Показать описание"}
-
+    
                             </button>
                         )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAdminPanel(service);
-                            }}
-                            className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 mr-1"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path fillRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                                      clipRule="evenodd"/>
-                            </svg>
-                            Просмотр сервиса
-
-                        </button>
+                        {!service.admin && (
+    <button
+    onClick={(e) => {
+        e.stopPropagation();
+        handleOpenAdminPanel(service);
+    }}
+    className="inline-flex items-center h-11 text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-4 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-900 transition-colors duration-300"
+    >
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-5 w-5 mr-1"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+    >
+        <path fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+              clipRule="evenodd"/>
+    </svg>
+    Просмотр сервиса
+    
+    </button>
+                        )}
+                       
                     </div>
                 </div>
-
+    
                 {openInstructionId === service.id && (
                     <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                         <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -570,7 +592,7 @@ export default function Services() {
                                         <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.name.message}</p>
                                     )}
                                 </div>
-
+                                {isCreating && (
                                 <div className="mb-4 flex items-center">
                                     <input
                                         type="checkbox"
@@ -582,7 +604,7 @@ export default function Services() {
                                         Доступен
                                     </label>
                                 </div>
-
+)}
                                 <div className="mb-4 flex items-center">
                                     <input
                                         type="checkbox"
@@ -591,7 +613,7 @@ export default function Services() {
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                                     />
                                     <label htmlFor="admin-checkbox" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                                        Есть админ-панель
+                                        Специально разработанный сервис
                                     </label>
                                 </div>
 
