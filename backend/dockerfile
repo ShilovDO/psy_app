@@ -19,4 +19,4 @@ COPY . .
 
 ENV DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/psycho
 
-CMD ["uvicorn", "app/main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
