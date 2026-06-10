@@ -1,5 +1,5 @@
 services:
-  backend:
+  carouselbackend:
     build:
       context: .
       dockerfile: Dockerfile.backend
@@ -12,7 +12,7 @@ services:
       - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/database_comics
     restart: unless-stopped
 
-  frontend:
+  carouselfrontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -20,5 +20,5 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - carouselbackend
     restart: unless-stopped
