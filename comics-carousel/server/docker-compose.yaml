@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: comics-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    volumes:
+      # Персистентное хранение загруженных изображений
+      - comics_images:/app/public/images
+    ports:
+      - "3001:3001"
+
+volumes:
+  comics_images:
+    driver: local
