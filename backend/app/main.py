@@ -8,7 +8,15 @@ import base64
 app = FastAPI()
 
 # CORS
-origins = ["http://localhost:5177", "http://127.0.0.1:5177", "http://192.168.255.129:5177"]
+# origins = ["http://localhost:5177", "http://127.0.0.1:5177", "http://192.168.255.129:5177"]
+origins = [
+    "http://192.168.0.233",
+    "http://176.108.249.27",
+    "http://localhost",
+    "http://frontend",
+    "http://roadpsy.ru",
+    "https://roadpsy.ru"
+]
 
 # Кастомная middleware
 app.middleware("http")(auth_middleware)
