@@ -127,7 +127,7 @@ def get_image_base64(photo_path: str) -> Optional[str]:
         return None
 
 
-@router.post("/change_user/")
+@router.post("/change_user")
 async def change_user(
     id: int = Form(...),
     username: str = Form(None),
