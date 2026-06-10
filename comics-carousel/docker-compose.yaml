@@ -11,6 +11,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/database_comics
     restart: unless-stopped
+    volumes:
+      - ./server/public/images:/server/public/images
 
   carouselfrontend:
     build:
