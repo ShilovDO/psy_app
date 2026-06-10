@@ -1,19 +1,4 @@
 services:
-  carouselbackend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: comics_backend
-    ports:
-      - "3001:3001"
-    environment:
-      - PORT=3001
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:PasswordDBWEB2025&@176.108.249.27:5432/database_comics
-    restart: unless-stopped
-    volumes:
-      - ./server/public/images:/app/server/public/images/
-
   carouselfrontend:
     build:
       context: .
@@ -24,3 +9,10 @@ services:
     depends_on:
       - carouselbackend
     restart: unless-stopped
+
+  carouselbackend:
+    build: ./server
+    ports:
+      - "5088:3001"  # Изменяем внешний порт на 3001
+    volumes:
+      - ./server/public/images:/app/public/images
