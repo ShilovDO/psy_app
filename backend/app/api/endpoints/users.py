@@ -5,35 +5,131 @@ from app.db.models import Users, Routes, Stations, UsersRoutes, Results
 from app.core.security import get_password_hash
 from app.api.dependencies import get_db
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from sqlalchemy import func
 import os
 import uuid
-from pathlib import Path 
+from pathlib import Path
 import shutil
 import base64
-from typing import Optional
-import os
-from pathlib import Path
 
 router = APIRouter()
 
 # Определяем базовую директорию для загрузок
-# В Docker используем /app/uploads, локально - uploads
-if os.path.exists("/.dockerenv"):
+# Проверяем несколько признаков Docker-окружения
+def is_docker():
+    """Проверка на запуск в Docker-контейнере"""
+    # Проверка 1: файл .dockerenv
+    if os.path.exists("/.dockerenv"):
+        return True
+    # Проверка 2: переменная окружения
+    if os.environ.get('DOCKER_CONTAINER', '').lower() == 'true':
+        return True
+    # Проверка 3: cgroup (для Linux)
+    try:
+        with open('/proc/1/cgroup', 'r') as f:
+            if 'docker' in f.read():
+                return True
+    except:
+        pass
+    return False
+
+# Определяем директорию
+if is_docker():
     UPLOAD_DIR = Path("/app/uploads")
 else:
     UPLOAD_DIR = Path("uploads")
 
+print(f"UPLOAD_DIR set to: {UPLOAD_DIR.absolute()}")
+print(f"Is Docker: {is_docker()}")
+
 # Создаем директорию с правильными правами
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-# Устанавливаем права (работает только в Linux/Docker)
-if os.name != 'nt':  # если не Windows
-    os.chmod(UPLOAD_DIR, 0o777)
+
+# Устанавливаем права (только в Linux/Docker)
+if os.name != 'nt':
+    try:
+        os.chmod(UPLOAD_DIR, 0o777)
+        print(f"Permissions set for {UPLOAD_DIR}")
+    except Exception as e:
+        print(f"Could not set permissions: {e}")
+
+def save_upload_file(upload_file: UploadFile, old_photo: str = None) -> str:
+    """
+    Сохраняет загруженный файл и возвращает путь для БД.
+    Всегда сохраняет в UPLOAD_DIR с уникальным именем.
+    """
+    # Удаляем старый файл если есть
+    if old_photo:
+        try:
+            # Извлекаем только имя файла из старого пути
+            old_filename = Path(old_photo.replace('\\', '/')).name
+            old_path = UPLOAD_DIR / old_filename
+            if old_path.exists():
+                old_path.unlink()
+                print(f"Old file deleted: {old_path}")
+        except Exception as e:
+            print(f"Error deleting old file: {e}")
+    
+    # Генерируем уникальное имя
+    file_extension = os.path.splitext(upload_file.filename)[1] or '.jpg'
+    safe_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = UPLOAD_DIR / safe_filename
+    
+    # Сохраняем файл
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(upload_file.file, buffer)
+    
+    # Устанавливаем права
+    if os.name != 'nt':
+        try:
+            os.chmod(file_path, 0o666)
+        except:
+            pass
+    
+    print(f"File saved: {file_path}")
+    
+    # ВСЕГДА возвращаем ОТНОСИТЕЛЬНЫЙ путь для БД
+    return f"uploads/{safe_filename}"
+
+def get_image_base64(photo_path: str) -> Optional[str]:
+    """Читает файл изображения и возвращает base64"""
+    if not photo_path:
+        return None
+    
+    try:
+        # Нормализуем путь
+        photo_path = photo_path.replace('\\', '/')
+        
+        # Пробуем разные варианты пути
+        possible_paths = []
+        
+        # Если путь относительный (начинается с uploads/)
+        if photo_path.startswith('uploads/'):
+            possible_paths.append(UPLOAD_DIR / Path(photo_path).name)
+            possible_paths.append(Path(photo_path))
+        else:
+            possible_paths.append(Path(photo_path))
+            possible_paths.append(UPLOAD_DIR / Path(photo_path).name)
+        
+        # Пробуем открыть файл
+        for path in possible_paths:
+            if path.exists():
+                with open(path, "rb") as img_file:
+                    image_bytes = img_file.read()
+                    return base64.b64encode(image_bytes).decode("utf-8")
+        
+        print(f"Image not found. Tried: {possible_paths}")
+        return None
+        
+    except Exception as e:
+        print(f"Error reading image: {e}")
+        return None
+
 
 @router.post("/change_user/")
 async def change_user(
-    id: int = Form(None),
+    id: int = Form(...),
     username: str = Form(None),
     mail: str = Form(None),
     password: str = Form(None),
@@ -44,12 +140,19 @@ async def change_user(
     try:
         find_user = db.query(Users).filter(Users.id == id).first()
         
-        # Правильное преобразование с учетом null
+        if not find_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Пользователь не найден"
+            )
+        
+        # Правильное преобразование admin
         if admin is not None and admin.lower() != 'null':
             admin = admin.lower() in ('true', '1', 'yes')
         else:
             admin = None
 
+        # Проверка на последнего админа
         if find_user.admin and not admin:
             find_admins = db.query(Users).filter(Users.admin == True).all()
             if len(find_admins) == 1:
@@ -58,102 +161,58 @@ async def change_user(
                     detail="Это последний оставшийся админ в системе, его нельзя удалить",
                 )
         
-        check_user = (
-            db.query(Users)
-            .filter(Users.mail == mail)
-            .filter(Users.id != id)
-            .first()
-        )
-        if check_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Пользователь с такой почтой уже существует",
+        # Проверка на уникальность почты
+        if mail:
+            check_user = (
+                db.query(Users)
+                .filter(Users.mail == mail)
+                .filter(Users.id != id)
+                .first()
             )
+            if check_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Пользователь с такой почтой уже существует",
+                )
 
-        if find_user:
-            # Удаляем старый файл фото
-            if find_user.photo:
-                # Нормализуем путь (меняем \ на /)
-                old_photo = find_user.photo.replace('\\', '/')
-                old_photo_path = UPLOAD_DIR / Path(old_photo).name
-                
-                if old_photo_path.exists():
-                    try:
-                        old_photo_path.unlink()
-                    except Exception as e:
-                        print(f"Ошибка при удалении старого файла: {e}")
+        # Обработка изображения
+        if image and image.filename:
+            try:
+                # Сохраняем файл и получаем путь для БД
+                photo_path = save_upload_file(image, find_user.photo)
+                find_user.photo = photo_path
+            except Exception as e:
+                print(f"Error saving image: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to save image: {str(e)}"
+                )
 
-            photo_path = find_user.photo  # Сохраняем старый путь по умолчанию
-            
-            if image and image.filename:
-                try:
-                    # Генерируем уникальное имя файла
-                    file_extension = os.path.splitext(image.filename)[1] or '.jpg'
-                    safe_filename = f"{uuid.uuid4()}{file_extension}"
-                    file_path = UPLOAD_DIR / safe_filename
-                    
-                    # Гарантируем существование директории и права
-                    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-                    if os.name != 'nt':
-                        os.chmod(UPLOAD_DIR, 0o777)
-                    
-                    # Сохраняем файл
-                    with open(file_path, "wb") as buffer:
-                        shutil.copyfileobj(image.file, buffer)
-                    
-                    # Устанавливаем права на файл
-                    if os.name != 'nt':
-                        os.chmod(file_path, 0o666)
-                    
-                    # Сохраняем относительный путь в БД (для совместимости)
-                    photo_path = f"uploads/{safe_filename}"
-                    
-                    print(f"File saved successfully: {file_path}")
-                    
-                except Exception as e:
-                    print(f"Error saving file: {e}")
-                    # Пробуем альтернативный метод сохранения
-                    try:
-                        contents = await image.read()
-                        file_path = UPLOAD_DIR / safe_filename
-                        with open(file_path, "wb") as f:
-                            f.write(contents)
-                        photo_path = f"uploads/{safe_filename}"
-                        print(f"File saved with alternative method: {file_path}")
-                    except Exception as e2:
-                        print(f"Alternative save also failed: {e2}")
-                        raise HTTPException(
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Failed to save file: {str(e2)}"
-                        )
-
-            # Обновляем пользователя
+        # Обновляем остальные поля
+        if username:
             find_user.username = username
+        if mail:
             find_user.mail = mail
-            find_user.photo = photo_path
-            if password:
-                find_user.password = get_password_hash(password)
+        if password:
+            find_user.password = get_password_hash(password)
+        if admin is not None:
             find_user.admin = admin
-            
-            db.commit()
-            db.refresh(find_user)
-            
-            return {
-                "id": find_user.id,
-                "username": find_user.username,
-                "mail": find_user.mail,
-                "admin": find_user.admin,
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Пользователь не найден"
-            )
+        
+        db.commit()
+        db.refresh(find_user)
+        
+        return {
+            "id": find_user.id,
+            "username": find_user.username,
+            "mail": find_user.mail,
+            "admin": find_user.admin,
+        }
             
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        db.rollback()
+        print(f"Unexpected error in change_user: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(
@@ -161,74 +220,37 @@ async def change_user(
             detail=f"Internal server error: {str(e)}"
         )
 
+
 @router.get("/all_users")
 async def all_users(
-    field, direction, page: int = 1, per_page: int = 10, db: Session = Depends(get_db)
+    field: str,
+    direction: str,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db)
 ):
-    # Вычисляем смещение
     offset = (page - 1) * per_page
-
-    # Получаем общее количество пользователей
     total = db.query(Users).count()
 
-    # Получаем пагинированный список пользователей
-    if field == "name" and direction == "asc":
-        users = (
-            db.query(Users)
-            .order_by(Users.username)
-            .offset(offset)
-            .limit(per_page)
-            .all()
-        )
-    elif field == "name" and direction == "desc":
-        users = (
-            db.query(Users)
-            .order_by(Users.username.desc())
-            .offset(offset)
-            .limit(per_page)
-            .all()
-        )
-    elif field == "email" and direction == "asc":
-        users = (
-            db.query(Users).order_by(Users.mail).offset(offset).limit(per_page).all()
-        )
-    elif field == "email" and direction == "desc":
-        users = (
-            db.query(Users)
-            .order_by(Users.mail.desc())
-            .offset(offset)
-            .limit(per_page)
-            .all()
-        )
-    elif field == "id" and direction == "asc":
-        users = db.query(Users).order_by(Users.id).offset(offset).limit(per_page).all()
-    elif field == "id" and direction == "desc":
-        users = (
-            db.query(Users)
-            .order_by(Users.id.desc())
-            .offset(offset)
-            .limit(per_page)
-            .all()
-        )
-    else:
-        users = db.query(Users).offset(offset).limit(per_page).all()
+    # Сортировка
+    sort_column = getattr(Users, field, Users.id)
+    if direction == "desc":
+        sort_column = sort_column.desc()
+    
+    users = (
+        db.query(Users)
+        .order_by(sort_column)
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
 
-    # Вычисляем общее количество страниц
     total_pages = (total + per_page - 1) // per_page
 
     items = []
     for user in users:
-        # Формируем base64 для изображения, если оно есть
-        image_base64 = None
-        if user.photo:
-            try:
-                with open(user.photo, "rb") as img_file:
-                    image_bytes = img_file.read()
-                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            except Exception as e:
-                print(f"Error reading image: {e}")
-
-        # Создаем объект ответа
+        image_base64 = get_image_base64(user.photo)
+        
         users_response = UsersResponse(
             id=user.id,
             username=user.username,
@@ -238,9 +260,6 @@ async def all_users(
             photo=image_base64
         )
         items.append(users_response)
-
-    # Преобразуем каждую запись в Pydantic модель
-    users_list = [User(**user.__dict__) for user in users]
 
     return {
         "items": items,
@@ -267,39 +286,46 @@ async def delete_user(Id: ID, request: Request, db: Session = Depends(get_db)):
                 }
             else:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="Нельзя менять самого себя"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Нельзя менять самого себя"
                 )
         else:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Пользователь не существует"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пользователь не существует"
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Refresh error: {e}")
+        print(f"Error in delete_user: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.detail
+            detail=str(e)
         )
 
+
 @router.get("/search_users_out_route", response_model=List[User])
-async def search_users(route_id: int, request: Request, search: str = "", db: Session = Depends(get_db)):
+async def search_users_out_route(
+    route_id: int,
+    request: Request,
+    search: str = "",
+    db: Session = Depends(get_db)
+):
     if not search:
         return []
     
     user_id = request.state.user.id
-    # Получаем user_id всех записей для данного маршрута
     existing_records = db.query(UsersRoutes.user_id).filter(
         UsersRoutes.route_id == route_id,
     ).all()
     existing_user_ids = {record.user_id for record in existing_records}
     
-    # Ищем пользователей, которых нет в маршруте
     users = db.query(Users).filter(
         Users.id != user_id,
         Users.username.like(f"{search}%"),
         ~Users.id.in_(existing_user_ids) if existing_user_ids else True
     ).all()
     
-    # Формируем результат (теперь in_route всегда будет False)
     return [
         User(
             id=user.id,
@@ -311,19 +337,19 @@ async def search_users(route_id: int, request: Request, search: str = "", db: Se
     ]
 
 
-
 @router.get("/search_users_in_route", response_model=List[User])
-async def search_users(route_id: int, search: str = "", db: Session = Depends(get_db)):
-    # Получаем user_id всех записей для данного маршрута
+async def search_users_in_route(
+    route_id: int,
+    search: str = "",
+    db: Session = Depends(get_db)
+):
     existing_records = db.query(UsersRoutes.user_id).filter(
         UsersRoutes.route_id == route_id
     ).all()
     existing_user_ids = {record.user_id for record in existing_records}
     
-    # Базовый запрос — только пользователи из маршрута
     query = db.query(Users).filter(Users.id.in_(existing_user_ids))
     
-    # Если есть поисковый запрос — добавляем регистронезависимый фильтр
     if search:
         query = query.filter(Users.username.ilike(f"{search}%"))
         
@@ -339,8 +365,9 @@ async def search_users(route_id: int, search: str = "", db: Session = Depends(ge
         for user in users
     ]
 
+
 @router.post("/add_image")
-async def addProduct(
+async def add_image(
     image: UploadFile = File(None),
     request: Request = None,
     db: Session = Depends(get_db)
@@ -348,93 +375,65 @@ async def addProduct(
     try:
         user_id = request.state.user.id
         find_user = db.query(Users).filter(Users.id == user_id).first()
-        if find_user:
-            # Проверяем и удаляем старое фото, если оно существует
-            if find_user.photo:
-                old_photo_path = Path(find_user.photo)
-                if old_photo_path.exists():
-                    try:
-                        old_photo_path.unlink()
-                        print(f"Старое фото удалено: {old_photo_path}")
-                    except Exception as e:
-                        print(f"Ошибка при удалении старого файла: {e}")
-                        # Продолжаем выполнение, даже если не удалось удалить старый файл
-
-            # 1. Сохраняем файл на диск
-            # Генерируем уникальное имя файла (используем расширение из загружаемого файла)
-            file_extension = os.path.splitext(image.filename)[1]
-            safe_filename = f"{uuid.uuid4()}{file_extension}"
-            
-            # Убеждаемся, что директория существует
-            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-            
-            file_path = UPLOAD_DIR / safe_filename
-            
-            # Сохраняем файл
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
-
-            # 2. Формируем объект для БД
-            find_user.photo = str(file_path)
-
-            # 3. Сохраняем в БД
-            db.commit()
-            db.refresh(find_user)
-
-            # 4. Возвращаем ответ (без изображения)
-            return {
-                "id": find_user.id,
-                "username": find_user.username,
-                "mail": find_user.mail,
-                "admin": find_user.admin,
-            }
-        else:
+        
+        if not find_user:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Пользователь не найден"
             )
+
+        # Используем общую функцию сохранения
+        photo_path = save_upload_file(image, find_user.photo)
+        find_user.photo = photo_path
+        
+        db.commit()
+        db.refresh(find_user)
+
+        return {
+            "id": find_user.id,
+            "username": find_user.username,
+            "mail": find_user.mail,
+            "admin": find_user.admin,
+        }
+        
     except HTTPException:
-        raise  # Пробрасываем HTTPException дальше
+        raise
     except Exception as e:
         db.rollback()
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-    finally:
-        db.close()
+        print(f"Error in add_image: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+
 
 @router.get("/users_for_results")
-async def usersForResults(
+async def users_for_results(
     request: Request,
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db)
+):
     user_id = request.state.user.id
-    # Базовый запрос
+    
     query = (
         db.query(Users)
         .join(Results, Results.user == Users.id)
         .join(Routes, Routes.id == Results.route)
         .filter(Routes.owner == user_id)
-        .distinct()  # чтобы избежать дубликатов, если у пользователя несколько результатов
+        .distinct()
     )
 
     users = query.all()
 
     items = []
     for user in users:
-        # Формируем base64 для изображения, если оно есть
-        image_base64 = None
-        if user.photo:
-            try:
-                with open(user.photo, "rb") as img_file:
-                    image_bytes = img_file.read()
-                    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            except Exception as e:
-                print(f"Error reading image: {e}")
-
-        # Создаем объект ответа
+        image_base64 = get_image_base64(user.photo)
+        
         users_response = UsersResponse(
             id=user.id,
             username=user.username,
             mail=user.mail,
             admin=user.admin,
+            active=user.active,
             photo=image_base64
         )
         items.append(users_response)
