@@ -1,26 +1,29 @@
 FROM node:18-alpine
 
-# Создаем непривилегированного пользователя
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
 WORKDIR /app
 
 # Копируем package.json и устанавливаем зависимости
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install
 
-# Копируем исходный код
+# Копируем ВСЕ файлы проекта
 COPY . .
 
-# Создаем директорию для изображений и устанавливаем права
-RUN mkdir -p /app/public/images && \
-    chown -R nodejs:nodejs /app/public/images && \
-    chmod 755 /app/public/images
+# Проверяем что все файлы на месте
+RUN echo "=== Checking files ===" && \
+    ls -la /app/ && \
+    echo "=== Checking for server.js ===" && \
+    ls -la /app/server.js && \
+    echo "=== Checking public directory ===" && \
+    ls -la /app/public/ && \
+    echo "=== Current user ===" && \
+    whoami
 
-# Переключаемся на непривилегированного пользователя
-USER nodejs
+# Создаем папку для изображений
+RUN mkdir -p /app/public/images && \
+    chmod 755 /app/public/images
 
 EXPOSE 3001
 
-CMD ["node", "server.js"]
+# ЯВНО указываем полный путь к файлу
+CMD ["node", "/app/server.js"]
