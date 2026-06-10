@@ -13,17 +13,37 @@ const tempTimersStorage = new Map();
 let currentResult = 0;
 const lastSlideResult = new Map();
 
+// Создаем директорию для изображений, если её нет
+if (!fs.existsSync(IMAGES_DIR)) {
+    fs.mkdirSync(IMAGES_DIR, { recursive: true });
+    console.log('Создана директория для изображений:', IMAGES_DIR);
+}
+
 // Настройки Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, IMAGES_DIR),
     filename: (req, file, cb) => cb(null, 'temp_' + Date.now() + path.extname(file.originalname))
 });
-const upload = multer({ storage });
+const upload = multer({ 
+    storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10 MB
+        files: 50
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/webp', 'image/jpeg', 'image/png', 'image/gif'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Неподдерживаемый тип файла'), false);
+        }
+    }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(IMAGES_DIR, {
     setHeaders: (res) => {
         res.set('Cache-Control', 'no-store');
@@ -34,23 +54,23 @@ app.use('/images', express.static(IMAGES_DIR, {
 // МАРШРУТЫ СТРАНИЦ
 // ============================================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/settings', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'settings.html'));
+    res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
 app.get('/config', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'settings.html'));
+    res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
 app.get('/result', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'result.html'));
+    res.sendFile(path.join(__dirname, 'public', 'result.html'));
 });
 
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // ============================================
@@ -544,6 +564,22 @@ app.get('/api/debug/temp-storage', (req, res) => {
         storage[key] = value;
     });
     res.json({ success: true, data: storage });
+});
+
+// Обработка ошибок Multer
+app.use((error, req, res, next) => {
+    if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'Файл слишком большой' });
+        }
+        if (error.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({ error: 'Слишком много файлов' });
+        }
+        return res.status(400).json({ error: error.message });
+    } else if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+    next();
 });
 
 app.listen(PORT, () => {
