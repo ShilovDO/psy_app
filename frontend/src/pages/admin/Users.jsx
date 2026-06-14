@@ -322,7 +322,6 @@ export default function Users() {
             admin: data.admin == "null" ? null : (data.admin === "true"),
             password: data.password || undefined
         };
-        alert(normalizedData.admin)
         const formData = new FormData();
         formData.append('id', currentUserId);
         formData.append('username', normalizedData.username);
