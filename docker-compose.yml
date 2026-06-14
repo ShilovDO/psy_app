@@ -14,10 +14,11 @@ services:
   frontend:
     build: ./frontend
     ports:
+      - "443:443"
       - "80:80"  # Изменяем внешний порт фронтенда на 8080
     depends_on:
       - backend
     restart: unless-stopped
     volumes:
-      - frontend/etc/nginx/ssl:/etc/nginx/ssl:ro # ← проброс сертификатов
+      - /frontend/etc/nginx/ssl:/etc/nginx/ssl:ro # ← проброс сертификатов
       
