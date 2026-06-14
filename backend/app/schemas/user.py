@@ -20,7 +20,8 @@ class User(BaseModel):
     username: str
     mail: EmailStr
     admin: Optional[bool] = None
-    active: Optional[bool] = None
+    active: Optional[bool] = None,
+    photo: Optional[str] = None
 
 class FullUser(BaseModel):
     id: int

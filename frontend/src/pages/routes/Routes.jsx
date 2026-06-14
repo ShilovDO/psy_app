@@ -644,7 +644,7 @@ export default function AppRoutes() {
                         className="flex justify-between items-center w-full p-4 border-b border-gray-100 dark:border-gray-700 transition-colors hover:cursor-pointer"
                     >
                         <div className="flex items-center w-full">
-                            <Avatar email={user.mail} size="sm" className="me-2"/>
+                        <Avatar email={user.mail} avatarUrl={user?.photo} size="md" className="me-2" />
                             <div className="flex-1">
                                 <p className="text-sm font-bold text-gray-900 truncate dark:text-gray-200">
                                     {user.username}
@@ -685,7 +685,7 @@ export default function AppRoutes() {
                                       className="flex justify-between items-center w-full p-4 border-b border-gray-100 dark:border-gray-700 transition-colors hover:cursor-pointer"
                                   > 
                                       <div className="flex items-center w-full">
-                                          <Avatar email={user.mail} size="sm" className="me-2"/>
+                                      <Avatar email={user.mail} avatarUrl={user?.photo} size="md" className="me-2" />
                                           <div className="flex-1">
                                               <p className="text-sm font-bold text-gray-900 truncate dark:text-gray-200">
                                                   {user.username}

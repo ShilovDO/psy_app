@@ -149,9 +149,10 @@ async def change_user(
         # Правильное преобразование admin
         if admin is not None and admin.lower() != 'null':
             admin = admin.lower() in ('true', '1', 'yes')
+        elif admin.lower() == 'null':
+            admin = 'null'
         else:
             admin = None
-
         # Проверка на последнего админа
         if find_user.admin and not admin:
             find_admins = db.query(Users).filter(Users.admin == True).all()
@@ -196,7 +197,10 @@ async def change_user(
         if password:
             find_user.password = get_password_hash(password)
         if admin is not None:
-            find_user.admin = admin
+            if type(admin) != bool and admin.lower() == 'null':
+                find_user.admin = None
+            else:
+                find_user.admin = admin
         
         db.commit()
         db.refresh(find_user)
@@ -320,7 +324,7 @@ async def search_users_out_route(
     ).all()
     existing_user_ids = {record.user_id for record in existing_records}
     
-    users = db.query(Users).filter(
+    users = db.query(Users).filter(Users.active == True,
         Users.id != user_id,
         Users.username.like(f"{search}%"),
         ~Users.id.in_(existing_user_ids) if existing_user_ids else True
@@ -331,7 +335,8 @@ async def search_users_out_route(
             id=user.id,
             username=user.username,
             mail=user.mail,
-            admin=user.admin
+            admin=user.admin,
+            photo=get_image_base64(user.photo)
         )
         for user in users
     ]
@@ -353,14 +358,15 @@ async def search_users_in_route(
     if search:
         query = query.filter(Users.username.ilike(f"{search}%"))
         
-    users = query.filter(Users.active == True).all()
+    users = query.filter().all()
     
     return [
         User(
             id=user.id,
             username=user.username,
             mail=user.mail,
-            admin=user.admin
+            admin=user.admin,
+            photo=get_image_base64(user.photo)
         )
         for user in users
     ]

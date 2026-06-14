@@ -17,6 +17,7 @@ import os
 import uuid
 from pathlib import Path 
 import shutil
+from typing import Optional
 
 router = APIRouter()
 
@@ -128,11 +129,17 @@ async def registration_user(
     username: str = Form(None),
     mail: str = Form(None),
     password: str = Form(None),
-    admin: bool = Form(None),
+    admin: Optional[str] = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     user_check = db.query(Users).filter(Users.mail == mail).first()
+
+    if admin is not None and admin.lower() != 'null':
+        admin = admin.lower() in ('true', '1', 'yes')
+    else:
+        admin = None
+
     if user_check:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

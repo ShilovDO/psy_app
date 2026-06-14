@@ -54,6 +54,7 @@ export default function Users() {
     const imageRef = useRef(null);
     const fileInputRef = useRef(null);
     const [emailForAvatar, setEmailForAvatar] = useState('');
+    const [emailForCheck, setEmailForCheck] = useState('');
     const [focusLeave, setFocusLeave] = useState(false);
 
     const [searchParams, setSearchParams] = useSearchParams();
@@ -109,7 +110,7 @@ export default function Users() {
 
     const handleFocusLeaveEmail = (e) => {
         setFocusLeave(true);
-        setEmailForAvatar(watch('email'))
+        setEmailForAvatar(e.target.value)
         handleMailOne(e);
         
     };
@@ -141,6 +142,8 @@ export default function Users() {
         setValue('name', user.username);
         setValue('email', user.mail);
         setValue('admin', user.admin === null ? "null" : String(user.admin));
+        setEmailForAvatar(user.mail);
+        setEmailForCheck(user.mail);
 
         setAvatarPreviewBase64(user.photo || null);
         setAvatarBlob(null);
@@ -316,10 +319,10 @@ export default function Users() {
         const normalizedData = {
             username: data.name,
             mail: data.email,
-            admin: data.admin === "null" ? null : (data.admin === "true"),
+            admin: data.admin == "null" ? null : (data.admin === "true"),
             password: data.password || undefined
         };
-
+        alert(normalizedData.admin)
         const formData = new FormData();
         formData.append('id', currentUserId);
         formData.append('username', normalizedData.username);
@@ -414,6 +417,7 @@ export default function Users() {
         clearErrors();
         setEmailForAvatar('');
         setFocusLeave(false);
+        setMailFree(true);
     }
     }, [isModalOpen]);
 
@@ -547,7 +551,6 @@ export default function Users() {
                             <h2 className="text-xl font-bold mb-4 dark:text-gray-200">
                                 {isCreating ? 'Добавить нового пользователя' : 'Редактировать пользователя'}
                             </h2>
-
                             <div className="flex justify-center mb-6">
                                 <div className="relative cursor-pointer group" onClick={handleAvatarClick}>
                                     <Avatar
@@ -598,7 +601,7 @@ export default function Users() {
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                     />
                                     {errors.email && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{errors.email.message}</p>}
-                                    {!mailFree && <p className="mt-1 text-sm text-red-600 dark:text-red-500">Эта почта занята!</p>}
+                                    {(!mailFree && emailForCheck !== watch('email'))&& <p className="mt-1 text-sm text-red-600 dark:text-red-500">Эта почта занята!</p>}
                                 </div>
 
                                 <div className="mb-4">
@@ -624,8 +627,10 @@ export default function Users() {
                                         </>
                                     ) : (
                                         <>
-                                            <input
+                                            <TextInput
+                                                id="password"
                                                 type="password"
+                                                autocomplete="off"
                                                 {...register('password', {
                                                     pattern: {
                                                         value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/,
