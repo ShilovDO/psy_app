@@ -488,8 +488,9 @@ export default function Services() {
                             </div>
                             {admin && (
                                 <button
+                                title="Добавить сервис"
                                     onClick={handleCreateClick}
-                                    className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 overflow-hidden max-w-10 hover:max-w-[200px] group me-5"
+                                    className="flex items-center focus:outline-none text-white bg-green-400 hover:bg-green-500 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm py-2.5 px-2.5 me-2 mb-2 dark:bg-green-900 dark:hover:bg-green-800 dark:focus:ring-green-700 transition-all duration-500 me-5"
                                 >
                                     <svg 
                                         xmlns="http://www.w3.org/2000/svg" 
@@ -500,9 +501,6 @@ export default function Services() {
                                     >
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
-                                    <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 whitespace-nowrap">
-                                        Добавить сервис
-                                    </span>
                                 </button>
                             )}
                         </div>
